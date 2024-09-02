@@ -12,6 +12,7 @@ This guide is under construction
     - [ ] CUDA11 for CTranslate2 based projects
 - [ ] Documents and planning
     - [ ] Mermaid
+    - [ ] Markmap
 - [ ] IDE / Editors / Terminals
     - [ ] Sublime Text
     - [ ] Windows Terminal + Cmder 
