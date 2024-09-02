@@ -124,8 +124,8 @@ https://help.ubuntu.com/stable/ubuntu-help/nautilus-views.html.en
 In order for most anything else to install properly, we need these first:
 
 ```
-sudo apt update
-sudo apt install \
+sudo apt-get update
+sudo apt-get install \
     build-essential \
     curl \
     libbz2-dev \
