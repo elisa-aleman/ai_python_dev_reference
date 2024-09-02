@@ -7,6 +7,7 @@ This guide is under construction
     - [ ] pyenv / pyenv-win
     - [ ] pipx
     - [ ] poetry
+    - [ ] toml-cli
     - [ ] CUDA 12 for most
     - [ ] CUDA11 for CTranslate2 based projects
 - [ ] Documents and planning
