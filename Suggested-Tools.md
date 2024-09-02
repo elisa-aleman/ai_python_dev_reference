@@ -8,8 +8,7 @@ This guide is under construction
     - [ ] pipx
     - [ ] poetry
     - [ ] toml-cli
-    - [ ] CUDA 12 for most
-    - [ ] CUDA11 for CTranslate2 based projects
+    - [ ] CUDA 12 (CTranslate2 now supports too)
 - [ ] Documents and planning
     - [ ] Mermaid
     - [ ] Markmap
