@@ -1,32 +1,212 @@
-# Suggested Tools
+# Suggested Tools and Setup
 
 This guide is under construction
 
-- [ ] env cli tools
-    - [ ] anyenv (mac and linux)
-        - [ ] https://github.com/anyenv/anyenv
-        - [ ] clone, add path for bash
-        - [ ] `echo 'eval "$(anyenv init -)"' >> ~/.bash_profile`, remove the hyphen suggested.
-        - [ ] A warning will appear if I don't have a manifest directory
-        - [ ] `mkdir ~/.config`
-        - [ ] `anyenv install --init`
-        - [ ] Actually pyenv latest version does not work with it so don't use or recommend for pyenv
-    - [ ] pyenv / pyenv-win
-        - [ ] https://github.com/pyenv/pyenv
-        - [ ] `pyenv install 3.11.7` since 3.12 is not yet compatible with many projects.
-    - [ ] pipx
-        - [ ] https://github.com/pypa/pipx
-    - [ ] poetry / poetry plugin export
-        - [ ] https://python-poetry.org/docs/#installing-with-pipx
-        - [ ] `pipx install poetry && pipx inject poetry poetry-plugin-export`
-    - [ ] toml-cli
-        - [ ] `pipx install toml-cli`
-    - [ ] CUDA 12.1 (CTranslate2 now supports too)
+
+- [ ] IDE / Editors
+    - [ ] Sublime Text recheck settings
+
+- [ ] env cli tools recheck all commands 
+    - [ ] Add docker
+- [ ] write about python AI
+          CUDA 12.1 (CTranslate2 now supports too) repos install methods
+          maybe write about diff between torch versions. 
+ 
 - [ ] Documents and planning
     - [ ] Mermaid
     - [ ] Markmap
-- [ ] IDE / Editors
-    - [ ] Sublime Text
+- [ ] Re check all commands
+- [ ] syntax colors 
+- [ ] Once guide is finished propagate relevant parts to OS specific guides with links to this main document
+
+ 
+
+## IDE / Editors
+
+### Sublime Text
+
+- Install SublimeText4 for ease of use (this is my personal favorite, but it's not necessary)
+
+#### Install SublimeText on Windows and MacOSX
+
+
+https://www.sublimetext.com/download
+
+
+#### Install SublimeText on linux
+
+
+https://www.sublimetext.com/docs/linux_repositories.html
+
+```
+wget -qO - https://download.sublimetext.com/sublimehq-pub.gpg | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/sublimehq-archive.gpg
+
+sudo apt-get update
+sudo apt-get install sublime-text
+```
+
+#### Setup SublimeText
+
+- Paste the SublimeText4 preferences (my personal preferences)
+
+```
+{
+    "ignored_packages":
+    [
+        "Vintage",
+    ],
+    "spell_check": true,
+    "tab_size": 4,
+    "translate_tabs_to_spaces": true,
+    "copy_with_empty_selection": false
+}
+```
+
+Also, Sublime Text is all about the plugins. Install Package Control by typing CTRL+Shift+P, then typing "Install Package Control"
+
+Then here's some cool packages to try:
+
+- [LaTeXTools](https://packagecontrol.io/packages/LaTeXTools)
+- [MarkdownTOC](https://packagecontrol.io/packages/MarkdownTOC)
+- [MarkdownPreview](https://packagecontrol.io/packages/MarkdownPreview)
+- [MarkdownEditing](https://packagecontrol.io/packages/MarkdownEditing)
+- [Alignment](https://packagecontrol.io/packages/Alignment)
+- [IncrementSelection](https://packagecontrol.io/packages/Increment%20Selection)
+- [Selection Evaluator](https://packagecontrol.io/packages/Selection%20Evaluator)
+- [Paste as One Line](https://packagecontrol.io/packages/Paste%20as%20One%20Line)
+- [Invert Current Color Scheme](https://packagecontrol.io/packages/Invert%20Current%20Color%20Scheme)
+- [PackageResourceViewer](https://packagecontrol.io/packages/PackageResourceViewer)
+
+Now, for the Invert Current Color Scheme, I have my own fork that works with Sublime Text 4, so use the PackageResourceViewer to replace the main python file with my code:
+ 
+https://github.com/elisa-aleman/sublime-invert-current-color-scheme
+
+In MarkdownTOC.sublime-settings, paste the following for hyperlink markdowns and compatibility with MarkdownPreview:
+
+```
+{
+  "defaults": {
+    "autoanchor": true,
+    "autolink": true,
+    "markdown_preview": "github",
+    "uri_encoding": false
+  },
+}
+```
+
+After installing Markdown Editing, add this to the SublimeText4 preferences (my personal preferences)
+
+```
+"mde.auto_fold_link.enabled": false,
+```
+
+<a id="easy-tex-math-add-paired--signs-to-the-keybinds"></a>
+#### Easy TeX math: Add paired $ signs to the keybinds
+
+I found myself needing paired $dollar signs$ for math expressions in either LaTeX, GitLab with KeTeX or GitHub also with a different syntax but still some interpretation of TeX.
+
+Searching for [how to do it on macros](https://forum.sublimetext.com/t/snippet-wrap-current-line-or-selection/53285), I found this post about keybindings which is a way better solution:
+
+https://stackoverflow.com/questions/34115090/sublime-text-2-trying-to-escape-the-dollar-sign
+
+Which, as long as we implement the double escaped dollar sign solution, we can use freely.
+
+- Preferences > Key Bindings:
+- Add this inside the brackets:
+
+```
+[
+    // Auto-pair dollar signs on TeX or LaTeX
+    { "keys": ["$"], "command": "insert_snippet", "args": {"contents": "\\$$0\\$"}, "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.text.tex" },
+            { "key": "setting.auto_match_enabled", "operator": "equal", "operand": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "following_text", "operator": "regex_contains", "operand": "^(?:\t| |\\)|]|\\}|>|$)", "match_all": true },
+            { "key": "preceding_text", "operator": "not_regex_contains", "operand": "[\\$a-zA-Z0-9_]$", "match_all": true },
+            { "key": "eol_selector", "operator": "not_equal", "operand": "string.quoted.double", "match_all": true }
+        ]
+    },
+    { "keys": ["$"], "command": "insert_snippet", "args": {"contents": "\\$${0:$SELECTION}\\$"}, "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.text.tex" },
+            { "key": "setting.auto_match_enabled", "operator": "equal", "operand": true },
+            { "key": "selection_empty", "operator": "equal", "operand": false, "match_all": true }
+        ]
+    },
+    { "keys": ["$"], "command": "move", "args": {"by": "characters", "forward": true}, "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.text.tex" },
+            { "key": "setting.auto_match_enabled", "operator": "equal", "operand": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "following_text", "operator": "regex_contains", "operand": "^\\$", "match_all": true }
+        ]
+    },
+    { "keys": ["backspace"], "command": "run_macro_file", "args": {"file": "Packages/Default/Delete Left Right.sublime-macro"}, "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.text.tex" },
+            { "key": "setting.auto_match_enabled", "operator": "equal", "operand": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "preceding_text", "operator": "regex_contains", "operand": "\\$$", "match_all": true },
+            { "key": "following_text", "operator": "regex_contains", "operand": "^\\$", "match_all": true }
+        ]
+    },
+    // Auto-pair dollar signs on Markdown for github
+    { "keys": ["$"], "command": "insert_snippet", "args": {"contents": "\\$$0\\$"}, "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "text.html.markdown" },
+            { "key": "setting.auto_match_enabled", "operator": "equal", "operand": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "following_text", "operator": "regex_contains", "operand": "^(?:\t| |\\)|]|\\}|>|$)", "match_all": true },
+            { "key": "preceding_text", "operator": "not_regex_contains", "operand": "[\\$a-zA-Z0-9_]$", "match_all": true },
+            { "key": "eol_selector", "operator": "not_equal", "operand": "string.quoted.double", "match_all": true }
+        ]
+    },
+    { "keys": ["$"], "command": "insert_snippet", "args": {"contents": "\\$${0:$SELECTION}\\$"}, "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "text.html.markdown" },
+            { "key": "setting.auto_match_enabled", "operator": "equal", "operand": true },
+            { "key": "selection_empty", "operator": "equal", "operand": false, "match_all": true }
+        ]
+    },
+    { "keys": ["$"], "command": "move", "args": {"by": "characters", "forward": true}, "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "text.html.markdown" },
+            { "key": "setting.auto_match_enabled", "operator": "equal", "operand": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "following_text", "operator": "regex_contains", "operand": "^\\$", "match_all": true }
+        ]
+    },
+    { "keys": ["backspace"], "command": "run_macro_file", "args": {"file": "Packages/Default/Delete Left Right.sublime-macro"}, "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "text.html.markdown" },
+            { "key": "setting.auto_match_enabled", "operator": "equal", "operand": true },
+            { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
+            { "key": "preceding_text", "operator": "regex_contains", "operand": "\\$$", "match_all": true },
+            { "key": "following_text", "operator": "regex_contains", "operand": "^\\$", "match_all": true }
+        ]
+    },
+]
+
+```
+
+<a id="easily-transform-2-spaced-indent-to-4-spaced-indent"></a>
+### Easily transform 2 spaced indent to 4 spaced indent
+
+https://forum.sublimetext.com/t/can-i-easily-change-all-existing-2-space-indents-to-4-space-indents/40158/2
+
+- Sublime text, lower right corner
+- Click on Spaces
+- Select the current space number
+- Click Convert indentation to Tabs
+- Select the desired space number
+- Click Convert indentation to Spaces
+
+
+### Sublime Merge
+
+## Terminals
+
 - [ ] Terminals
     - [ ] Windows Terminal + Cmder
         - [ ] https://medium.com/talpor/windows-terminal-cmder-%EF%B8%8F-573e6890d143 
@@ -35,17 +215,28 @@ This guide is under construction
         - Make sure it's the `C:\Windows\system32\wsl.exe -d Ubuntu` and not the `ubuntu.exe` profile.
         - `C:\Windows\system32\wsl.exe -d Ubuntu --exec bash -l` to start in bash instead of sh]
     - [ ] iTerm2
-        -  
-- [ ] Accessibility Tools
-    - [ ] not bionic reading
-    - [ ] visual
-- [ ] Others
 
+
+### Windows
+
+### MacOSX
+
+### Linux
+
+
+ 
 ## Environment and CLI tools
 
 ### anyenv
 
-
+- [ ] anyenv (mac and linux)
+        - [ ] https://github.com/anyenv/anyenv
+        - [ ] clone, add path for bash
+        - [ ] `echo 'eval "$(anyenv init -)"' >> ~/.bash_profile`, remove the hyphen suggested.
+        - [ ] A warning will appear if I don't have a manifest directory
+        - [ ] `mkdir ~/.config`
+        - [ ] `anyenv install --init`
+        - [ ] Actually pyenv latest version does not work with it so don't use or recommend for pyenv
 
 
 ### pyenv / pyenv-win
@@ -56,8 +247,13 @@ Depending on your installation, you might already have a python, but it is bette
 
 This is specially useful if you need different versions for different projects (Maybe caused by incompatible updates).
 
+- [ ] pyenv / pyenv-win
+        - [ ] https://github.com/pyenv/pyenv
+        - [ ] `pyenv install 3.11.7` since 3.12 is not yet compatible with many projects.
+
 
 #### pyenv for Linux and MacOSX
+
 
 https://github.com/pyenv/pyenv#installation
 
@@ -224,6 +420,11 @@ pip install --upgrade pip
 
 ### pipx
 
+
+- [ ] pipx
+        - [ ] https://github.com/pypa/pipx
+
+
 ### Poetry for python project / dependency management
 
 [Poetry](https://python-poetry.org/) 
@@ -233,9 +434,12 @@ TODO: rewrite section with pipx and docker added explanation
 <!-- 
 Poetry is a tool to manage python project dependencies and environments in a version controlled (e.g. git) and group accessible syntax. It allows to use a virtual environment to locally install all dependencies, remove or update them as needed while having access to previous instances of the environment at a given time via the commit history
 
-```
-pip install poetry
-```
+
+- [ ] poetry / poetry plugin export
+        - [ ] https://python-poetry.org/docs/#installing-with-pipx
+        - [ ] `pipx install poetry && pipx inject poetry poetry-plugin-export`
+
+
 
 Usage guide: https://python-poetry.org/
 
@@ -259,11 +463,189 @@ And finally, when cloning a repository, you can use `poetry install` to easily i
 
 ### toml-cli
 
+
+- [ ] toml-cli
+        - [ ] `pipx install toml-cli`
+
+
+
 ## Documents and Planning
 
 ### Mermaid
 
 ### Markmap
+
+### GitHub/GitLab flavored markdown math
+
+#### GitHub Markdown math expressions for README.md, etc.
+
+Following this guide, math is different in GitLab markdown than say, GitHub or LaTeX.
+However, inside of the delimiters, it renders it using KaTeX, which uses LaTeX math syntax! 
+
+https://docs.gitlab.com/ee/user/markdown.html#math
+
+Inline: 
+```
+> $a^2 + b^2 = c^2$
+```
+
+Renders as: $a^2 + b^2 = c^2$
+
+Block:
+```
+> $$a^2 + b^2 = c^2$$
+```
+
+Renders as:
+
+$$a^2 + b^2 = c^2$$
+
+But it only supports one line of math, so for multiple lines you have to do this:
+
+```
+> $$a^2 + b^2 = c^2$$
+> <!-- (line break is important) -->
+> $$c = \sqrt{ a^2 + b^2 }$$
+```
+
+Renders as:
+
+$$a^2 + b^2 = c^2$$
+
+$$c = \sqrt{ a^2 + b^2 }$$
+
+It can even display matrices and the like:
+
+```
+> $$
+> l_1 = 
+> \begin{bmatrix}
+>     \begin{bmatrix}
+>         x_1 & y_1
+>     \end{bmatrix} \\
+>     \begin{bmatrix}
+>         x_2 & y_2
+>     \end{bmatrix} \\
+>     ... \\
+>     \begin{bmatrix}
+>         x_n & y_n
+>     \end{bmatrix} \\
+> \end{bmatrix}
+> $$
+```
+
+$$
+l_1 = 
+\begin{bmatrix}
+    \begin{bmatrix}
+        x_1 & y_1
+    \end{bmatrix} \\
+    \begin{bmatrix}
+        x_2 & y_2
+    \end{bmatrix} \\
+    ... \\
+    \begin{bmatrix}
+        x_n & y_n
+    \end{bmatrix} \\
+\end{bmatrix}
+$$
+
+
+However, % comments will break the environment.
+
+Math syntax in LaTeX:
+
+https://katex.org/docs/supported.html
+
+
+#### GitLab Markdown math expressions for README.md, etc.
+
+Following this guide, math is different in GitLab markdown than say, GitHub or LaTeX.
+However, inside of the delimiters, it renders it using KaTeX, which uses LaTeX math syntax! 
+
+https://docs.gitlab.com/ee/user/markdown.html#math
+
+Inline: 
+```
+> $`a^2 + b^2 = c^2`$
+```
+
+Renders as: $`a^2 + b^2 = c^2`$
+
+Block:
+```
+> ```math
+> a^2 + b^2 = c^2
+> ```
+```
+
+Renders as:
+
+```math
+a^2 + b^2 = c^2
+```
+
+But it only supports one line of math, so for multiple lines you have to do this:
+
+```
+> ```math
+> a^2 + b^2 = c^2
+> ```
+> ```math
+> c = \sqrt{ a^2 + b^2 }
+> ```
+```
+
+Renders as:
+
+```math
+a^2 + b^2 = c^2
+```
+```math
+c = \sqrt{ a^2 + b^2 }
+```
+
+It can even display matrices and the like:
+
+```
+> ```math
+> l_1 = 
+> \begin{bmatrix}
+>     \begin{bmatrix}
+>         x_1 & y_1
+>     \end{bmatrix} \\
+>     \begin{bmatrix}
+>         x_2 & y_2
+>     \end{bmatrix} \\
+>     ... \\
+>     \begin{bmatrix}
+>         x_n & y_n
+>     \end{bmatrix} \\
+> \end{bmatrix}
+> ```
+```
+
+```math
+l_1 = 
+\begin{bmatrix}
+    \begin{bmatrix}
+        x_1 & y_1
+    \end{bmatrix} \\
+    \begin{bmatrix}
+        x_2 & y_2
+    \end{bmatrix} \\
+    ... \\
+    \begin{bmatrix}
+        x_n & y_n
+    \end{bmatrix} \\
+\end{bmatrix}
+```
+
+However, % comments will break the environment.
+
+Math syntax in LaTeX:
+
+https://katex.org/docs/supported.html
 
 ### LaTeX for documentation / reports
 
@@ -574,20 +956,6 @@ Renders as:
 $$x=3$$
 
 
-## IDE / Editors
-
-### Sublime Text
-
-### Sublime Merge
-
-## Terminals
-
-### Windows
-
-### MacOSX
-
-### Linux
-
 ## Web development
 
 ### Python FastAPI
@@ -752,6 +1120,231 @@ a       @       185.199.110.153         600 seconds
 a       @       185.199.111.153         600 seconds
 cname   www     your-username.github.io 600 seconds   
 ```
+
+## Python suggested libraries
+
+This is my generic fresh start install so I can work. Usually I'd install all of them in general, but recently I only install the necessary libraries under venv. There's more libraries with complicated installations in other repositories of mine, and you might not wanna run this particular piece of code without checking what I'm doing first. For example, you might have a specific version of Tensorflow that you want, or some of these you won't use. But I'll leave it here as reference.
+
+<a id="basic-tasks"></a>
+#### Basic tasks:
+
+```
+pip install numpy scipy jupyter statsmodels \
+pandas pathlib tqdm retry openpyxl
+```
+
+<a id="plotting"></a>
+#### Plotting:
+```
+pip install matplotlib adjustText plotly kaleido
+```
+
+<a id="basic-data-science-and-machine-learning"></a>
+#### Basic data science and machine learning:
+```
+pip install sklearn sympy pyclustering
+```
+
+<a id="data-mining--text-mining--crawling--scraping-websites"></a>
+#### Data mining / text mining / crawling / scraping websites:
+```
+pip install beautifulsoup4 requests selenium
+```
+
+<a id="natural-language-processing-nlp"></a>
+#### Natural language processing (NLP):
+```
+pip install gensim nltk langdetect
+```
+
+For Japanese NLP tools see:
+https://github.com/elisa-aleman/MeCab-python
+
+For Chinese NLP tools see:
+https://github.com/elisa-aleman/StanfordCoreNLP_Chinese
+
+<a id="neural-network-and-machine-learning"></a>
+#### Neural network and machine learning:
+```
+pip install tensorflow tflearn keras \
+torch torchaudio torchvision \
+optuna
+```
+<a id="xgboost"></a>
+#### XGBoost
+
+To Install with CPU:
+```
+pip install xgboost
+```
+
+To Install with CUDA GPU integration:
+```
+git clone --recursive https://github.com/dmlc/xgboost
+cd xgboost
+mkdir build
+cd build
+cmake .. -DUSE_CUDA=ON
+make -j8
+cd ../python-package
+python setup.py install
+```
+
+<a id="lightgbm"></a>
+#### LightGBM
+
+To Install with CPU:
+
+```
+pip install lightgbm
+```
+
+Install dependencies:
+```
+apt-get install libboost-all-dev
+apt install ocl-icd-libopencl1
+apt install opencl-headers
+apt install clinfo
+apt install ocl-icd-opencl-dev
+```
+Install with CUDA GPU integration:
+
+```
+pip install lightgbm --install-option=--gpu --install-option="--opencl-include-dir=/usr/local/cuda/include/" --install-option="--opencl-library=/usr/local/cuda/lib64/libOpenCL.so"
+```
+
+<a id="minepy--maximal-information-coefficient"></a>
+#### MINEPY / Maximal Information Coefficient
+
+For Minepy / Maximal Information Coefficient, we need the Visual Studio C++ Build Tools as a dependency, so install it first:<br>
+https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+```
+pip install minepy
+```
+
+<a id="computer-vision-opencv"></a>
+#### Computer Vision (OpenCV)
+
+**Note to self: re-write with poetry project use instead of venv**
+
+with CPU and no extra options:
+
+```
+python -m pip install -U opencv-python opencv-contrib-python
+```
+
+
+<a id="install-opencv-with-ffmpeg"></a>
+##### Install OpenCV with ffmpeg
+
+Install dependencies:
+
+```
+apt-get update
+apt-get upgrade
+apt-get install build-essential
+apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
+apt-get install libavcodec-dev libavformat-dev libswscale-dev libv4l-dev
+apt-get install libxvidcore-dev libx264-dev
+apt-get install libgtk-3-dev
+apt-get install libatlas-base-dev gfortran pylint
+apt-get install python2.7-dev python3.5-dev python3.6-dev
+apt-get install unzip
+```
+
+Now the ffmpeg dependency:
+```
+add-apt-repository ppa:jonathonf/ffmpeg-3
+apt update
+apt install ffmpeg libav-tools x264 x265
+```
+
+Check the version:
+```
+ffmpeg
+```
+
+Download and build opencv
+
+```
+wget https://github.com/opencv/opencv/archive/3.4.0.zip -O opencv-3.4.0.zip
+wget https://github.com/opencv/opencv_contrib/archive/3.4.0.zip -O opencv_contrib-3.4.0.zip
+
+unzip opencv-3.4.0.zip
+unzip opencv_contrib-3.4.0.zip
+
+cd  opencv-3.4.0
+mkdir build_3.5
+mkdir build
+cd build
+```
+
+Make, but remember to replace Python versions:
+
+```
+which python
+```
+
+```
+cmake -DCMAKE_BUILD_TYPE=Release \
+    -D WITH_FFMPEG=ON \
+    -D PYTHON3_EXECUTABLE=<path to your python> \
+    -D CMAKE_INSTALL_PREFIX=/usr/local \
+    -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-3.4.0/modules \
+    -D OPENCV_ENABLE_NONFREE=True ..
+
+make -j8        #(where -j8 is for 8 cores in the server cpu)
+make install
+ldconfig
+```
+
+
+
+
+## Shell Scripting for convenience
+
+When it comes down to it, specially when working with LaTeX or git, you find yourself making the same commands over and over again. That takes time and frustration, so I find that making scripts from time to time saves me a lot of time in the future.
+
+
+<a id="basic-flag-setup-with-getopts"></a>
+### Basic flag setup with getopts
+
+Once in a while those scripts will need some input to be more useful in as many cases as possible instead of a one time thing.
+
+Looking for how to do this I ran across [a simple StackOverflow question](https://stackoverflow.com/questions/14447406/bash-shell-script-check-for-a-flag-and-grab-its-value), which led me to the `getopts` package and its tutorial:
+
+[Getopts manual](https://archive.ph/TRzn4)
+
+This is a working example:
+
+```
+while getopts ":a:" opt; do
+  case $opt in
+    a)
+      echo "-a was triggered, Parameter: $OPTARG" >&2
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+
+```
+
+<a id="argparse-bash-by-nhoffman"></a>
+### Argparse-bash by nhoffman
+
+Now sometimes you'll want to have fancy arguments with both a shortcut name (-) and a long name (--), for example `-a` and `--doall` both pointing to the same command. In that case I recommend using nhoffman's implementation of Python's `argparse` in bash:
+
+[argparse.bash by nhoffman on GitHub](https://github.com/nhoffman/argparse-bash)
+
 
 
 ## Accessibility Tools
