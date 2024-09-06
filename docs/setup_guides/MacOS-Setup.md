@@ -2,50 +2,7 @@
 
 This is how I set up a fresh mac to start working in machine learning and programming. My lab runs under a proxy, so all the settings have that one extra ...sigh... task to work correctly. I keep this tutorial handy in case I do a clean OS install or if I need to check some of my initial settings.
 
-<!-- MarkdownTOC autolink="true" autoanchor="true" -->
 
-- [Basic Settings](#basic-settings)
-    - [Install SublimeText](#install-sublimetext)
-        - [Easy TeX math: Add paired $ signs to the keybinds](#easy-tex-math-add-paired--signs-to-the-keybinds)
-    - [Easily transform 2 spaced indent to 4 spaced indent](#easily-transform-2-spaced-indent-to-4-spaced-indent)
-- [Setup proxy system wise](#setup-proxy-system-wise)
-    - [Normal settings](#normal-settings)
-    - [Time settings](#time-settings)
-- [Setup proxy settings in bash](#setup-proxy-settings-in-bash)
-- [Install Homebrew](#install-homebrew)
-    - [Install Xcode Command Line Tools](#install-xcode-command-line-tools)
-    - [Install Homebrew with no proxy](#install-homebrew-with-no-proxy)
-    - [Install Homebrew under a proxy](#install-homebrew-under-a-proxy)
-- [Curl proxy settings](#curl-proxy-settings)
-- [Install and setup Git](#install-and-setup-git)
-    - [Check your branches in git log history in a pretty line](#check-your-branches-in-git-log-history-in-a-pretty-line)
-    - [Push with tags: multi-line git alias](#push-with-tags-multi-line-git-alias)
-    - [GitHub Markdown math expressions for README.md, etc.](#github-markdown-math-expressions-for-readmemd-etc)
-    - [GitLab Markdown math expressions for README.md, etc.](#gitlab-markdown-math-expressions-for-readmemd-etc)
-    - [Install Git Large File System](#install-git-large-file-system)
-    - [Make a new Git \(LFS\) repository from local](#make-a-new-git-lfs-repository-from-local)
-    - [Manage multiple GitHub or GitLab accounts](#manage-multiple-github-or-gitlab-accounts)
-- [Install Docker Desktop for Mac](#install-docker-desktop-for-mac)
-- [Install Python versions with pyenv and virtual environments with poetry](#install-python-versions-with-pyenv-and-virtual-environments-with-poetry)
-    - [Useful Data Science libraries](#useful-data-science-libraries)
-        - [Basic tasks:](#basic-tasks)
-        - [Plotting:](#plotting)
-        - [Basic data science and machine learning:](#basic-data-science-and-machine-learning)
-        - [Data mining / text mining / crawling / scraping websites:](#data-mining--text-mining--crawling--scraping-websites)
-        - [Natural language processing \(NLP\):](#natural-language-processing-nlp)
-        - [Neural network and machine learning:](#neural-network-and-machine-learning)
-        - [XGBoost](#xgboost)
-        - [LightGBM](#lightgbm)
-        - [MINEPY / Maximal Information Coefficient](#minepy--maximal-information-coefficient)
-        - [Computer Vision \(OpenCV\)](#computer-vision-opencv)
-- [Shell Scripting for convenience](#shell-scripting-for-convenience)
-    - [Basic flag setup with getopts](#basic-flag-setup-with-getopts)
-    - [Argparse-bash by nhoffman](#argparse-bash-by-nhoffman)
-
-<!-- /MarkdownTOC -->
-
-
-<a id="basic-settings"></a>
 ## Basic Settings
 
 Setup root password:
@@ -73,10 +30,10 @@ defaults write com.apple.finder AppleShowAllFiles YES
 ```
 
 
-<a id="setup-proxy-system-wise"></a>
+
 ## Setup proxy system wise
 
-<a id="normal-settings"></a>
+
 ### Normal settings
 
 First, know the {PROXY_HOST} url and the {PORT} that you need to access in your specific place of work. Then put those in the system settings as appropriate.
@@ -97,7 +54,7 @@ Bypass proxy settings for these Hosts & Domains:
 
 Depending on your organization, setting a HOST_URL to bypass here might also be necessary. Check with your administrator.
 
-<a id="time-settings"></a>
+
 ### Time settings
 
 Some proxies need you to set up the time of the computer to match the network in order to work correctly. Mine does at least. So the settings are such:
@@ -109,7 +66,7 @@ Set Date and Time automatically:
 
 The {TIME_URL} will depend on your organization, so check with your administrator.
 
-<a id="setup-proxy-settings-in-bash"></a>
+
 ## Setup proxy settings in bash
 
 So now that the system settings are out of the way, we need to setup the proxy addresses in bash so that programs we run take those variables, since the system setup doesn't reach deep enough for several tools we use.
@@ -146,7 +103,7 @@ Press `CTRL+O` to write, press `ENTER` to keep the name, then press `CTRL+X` to 
 
 Relaunch the terminal.
 
-<a id="install-homebrew"></a>
+
 ## Install Homebrew
 
 For more info, click [here](https://brew.sh).
@@ -160,7 +117,7 @@ First we need to consider the macOS Requirements from their website:
 
 As it says in the third requirement, we need the Command Line Tools for Xcode.
 
-<a id="install-xcode-command-line-tools"></a>
+
 ### Install Xcode Command Line Tools
 
 We have 3 options:
@@ -185,12 +142,12 @@ Xcode as an app is really heavy, so if you don't intend to work directly on the 
 
 For this option, you also need to sign up to be an Apple Developer. 
 
-<a id="install-homebrew-with-no-proxy"></a>
+
 ### Install Homebrew with no proxy
 
 `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
 
-<a id="install-homebrew-under-a-proxy"></a>
+
 ### Install Homebrew under a proxy
 
 Now that we have the CLT, we can proceed.
@@ -215,7 +172,7 @@ alias brew="https_proxy={PROXY_HOST}:{PORT} brew"
 Otherwise, if you're not under a proxy just follow the instructions here:
 https://docs.brew.sh/Installation
 
-<a id="curl-proxy-settings"></a>
+
 ## Curl proxy settings
 
 Right there installing Homebrew we used explicit proxy settings on the curl command to avoid any issues, but to avoid doing this every time for future uses of curl, we also need to setup proxy settings.
@@ -230,7 +187,7 @@ proxy = {PROXY_HOST}:{PORT}
 ```
 
 
-<a id="install-docker-desktop-for-mac"></a>
+
 ## Install Docker Desktop for Mac
 
 Docker allows us to run server apps that share an internal environment separate from the OS.
