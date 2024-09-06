@@ -1,14 +1,12 @@
 # Git setup guide
 
-
 First install git according to your OS. 
-
 
 ## Install Git
 
 ### Git on Windows
 
-Use Git Bash as described in the [Windows setup document]()
+Use Git Bash as described in the [Windows setup document](./Windows-Setup.md)
 
 
 I followed this guide for using git on Windows:<br>
