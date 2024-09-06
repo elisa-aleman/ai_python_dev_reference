@@ -98,3 +98,5 @@ pt2e_prepared_model.meta = fx_prepared_model.meta
 
 
 ```
+
+the above almost works but the quint8 config makes it not work in TFLite which uses qint8 config, which somehow won't work with torch native backend. 
