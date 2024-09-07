@@ -1,4 +1,13 @@
-# Mac Python setup environment for Machine learning Laboratory on a proxy
+
+# Mac Python setup environment for development (on a proxy)
+
+TODO:
+- [ ] Re-check old narrative
+- [ ] Check all syntax highlights and location comments
+- [ ] Add style guide for location comments
+- [ ] Wrap all links
+- [ ] propagate relevant parts of suggested tools guide to OS specific guides with links to this main document
+
 
 This is how I set up a fresh mac to start working in machine learning and programming. My lab runs under a proxy, so all the settings have that one extra ...sigh... task to work correctly. I keep this tutorial handy in case I do a clean OS install or if I need to check some of my initial settings.
 
@@ -8,7 +17,9 @@ This is how I set up a fresh mac to start working in machine learning and progra
 Setup root password:
 https://www.cyberciti.biz/faq/how-to-change-root-password-on-macos-unix-using-terminal/
 
-```
+```sh
+# @ shell(mac_osx)
+
 sudo passwd root
 ```
 
@@ -25,7 +36,10 @@ sudo passwd root
 Hidden files visibility:
 I can't work without seeing hidden files, so in the newer versions of MacOSX we can do `CMD+Shift+.` and the hidden files will appear. 
 If this doesn't work, open up the terminal and:
-```
+
+```sh
+# @ shell(mac_osx)
+
 defaults write com.apple.finder AppleShowAllFiles YES
 ```
 
@@ -73,14 +87,18 @@ So now that the system settings are out of the way, we need to setup the proxy a
 
 So we will add these settings to `.zprofile` to load each time we login to our user session. 
 
-```
-sudo nano .zprofile
+```sh
+# @ shell(mac_osx)
+
+sudo nano ~/.zprofile
 ```
 
 This will open a text editor inside the terminal. If the file is new it will be empty.
 Add the following lines: (copy and paste)
 
-```
+```sh
+# @ nano::~/.zprofile
+
 export http_proxy={PROXY_HOST}:{PORT}
 export https_proxy={PROXY_HOST}:{PORT}
 export all_proxy={PROXY_HOST}:{PORT}
@@ -89,11 +107,15 @@ export HTTPS_PROXY={PROXY_HOST}:{PORT}
 export ALL_PROXY={PROXY_HOST}:{PORT}
 export no_proxy=localhost,127.0.0.1,169.254/16,HOST_URL
 export NO_PROXY=localhost,127.0.0.1,169.254/16,HOST_URL
+
+# CTRL+O
+# CTRL+X
 ```
 
 Then these ones for logging in ssh to the servers in the laboratory without typing it every time.
 
-```
+```sh
+# @ shell(mac_osx)
 alias lab_server="ssh -p {PORT} {USERNAME}@{HOST_IP_ADDRESS}"
 ```
 
@@ -124,7 +146,9 @@ We have 3 options:
 
 - Install just the tools:
 
-```
+```sh
+# @ shell(mac_osx)
+
 xcode-select --install
 ```
 
@@ -153,19 +177,25 @@ For this option, you also need to sign up to be an Apple Developer.
 Now that we have the CLT, we can proceed.
 
 First configure your git proxy settings:
-```
+```sh
+# @ shell(mac_osx)
+
 git config --global http.proxy http://{PROXY_HOST}:{PORT}
 ```
 Replace your {PROXY_HOST} and your {PORT}.
 
 Then install homebrew using proxy settings as well:
-```
+```sh
+# @ shell(mac_osx)
+
 /bin/bash -c "$(curl -x {PROXY_HOST}:{PORT} -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 ```
 
 And finally alias `brew` so it always uses your proxy settings:
 
-```
+```sh
+# @ shell(mac_osx)
+
 alias brew="https_proxy={PROXY_HOST}:{PORT} brew"
 ```
 
@@ -177,12 +207,16 @@ https://docs.brew.sh/Installation
 
 Right there installing Homebrew we used explicit proxy settings on the curl command to avoid any issues, but to avoid doing this every time for future uses of curl, we also need to setup proxy settings.
 
-```
+```sh
+# @ shell(mac_osx)
+
 sudo nano ~/.curlrc
 ```
 
 And add the following:
-```
+```sh
+# @ nano::~/.curlrc
+
 proxy = {PROXY_HOST}:{PORT} 
 ```
 

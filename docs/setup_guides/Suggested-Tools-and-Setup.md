@@ -3,42 +3,440 @@
 This guide is under construction
 
 
-- [ ] IDE / Editors
-    - [ ] Sublime Text recheck settings
-
-- [ ] env cli tools recheck all commands 
-    - [ ] Add docker
-- [ ] write about python AI
-          CUDA 12.1 (CTranslate2 now supports too) repos install methods
-          maybe write about diff between torch versions. 
- 
-- [ ] Documents and planning
-    - [ ] Mermaid
-    - [ ] Markmap
-- [ ] Re check all commands
-- [ ] syntax colors 
+TODO:
+- [ ] Write sections about terminals
+- [ ] Finish anyenv section
+- [ ] Add poetry usage section
+- [ ] Add docker specific Poetry section
+- [ ] Update all python package suggestions (pretty outdated)
 - [ ] Once guide is finished propagate relevant parts to OS specific guides with links to this main document
+- [ ] Add style guide for location comments
+
+
+## Terminals
+
+- [ ] Terminals
+
+### Windows Terminal with Cmder and GitBash profiles
+
+- [ ] Windows Terminal + Cmder
+        - [ ] https://medium.com/talpor/windows-terminal-cmder-%EF%B8%8F-573e6890d143 
+        - https://windowsterminalthemes.dev/
+        - Starting directory can be /mnt/d/...
+        - Make sure it's the `C:\Windows\system32\wsl.exe -d Ubuntu` and not the `ubuntu.exe` profile.
+        - `C:\Windows\system32\wsl.exe -d Ubuntu --exec bash -l` to start in bash instead of sh]
+
+#### Windows Terminal themes
+
+I found this pretty comprehensive free [Windows Terminal themes collection](https://windowsterminalthemes.dev/).
+
+To implement a theme, all you have to do is copy the JSON code, then open Windows Terminal, go under Settings, then the lower left corner must have a `Open JSON file` button, which points to the actual Windows Terminal configuration file, where you can paste the themes where appropriate (alongside other themes, and remember to check that the commas match)
+
+### MacOSX
+
+- [ ] iTerm2
+    - [ ] https://iterm2colorschemes.com/
+
+### Linux
+
 
  
+## Environment and CLI tools
+
+### anyenv
+
+- [ ] anyenv (mac and linux)
+    - [ ] https://github.com/anyenv/anyenv
+    - [ ] clone, add path for bash
+    - [ ] `echo 'eval "$(anyenv init -)"' >> ~/.bash_profile`, remove the hyphen suggested.
+    - [ ] A warning will appear if I don't have a manifest directory
+    - [ ] `mkdir ~/.config`
+    - [ ] `anyenv install --init`
+    - [ ] Actually pyenv latest version does not work with it so don't use or recommend for pyenv
+    - [ ] Used it for nodenv for Node.js (specifically for mermaid-cli)
+
+### pyenv / pyenv-win
+
+[Pyenv](https://github.com/pyenv/pyenv) is a Python version manager that allows you to isolate different installations of python in the same system. It also makes it easy to uninstall without unintended consequences when you need to start from fresh for whatever reason.
+
+Depending on your installation, you might already have a python, but it is better to avoid using it as it interacts with the system, so we install a local version with Pyenv. Pyenv also makes it so that pip and python are always matched for each other in the correct version, which can be a headache if you don't install them isolated.
+
+This is specially useful if you need different versions for different projects (Maybe caused by incompatible updates).
+
+There's also a fork that works on windows called [`pyenv-win`](https://github.com/pyenv-win/pyenv-win), although I entirely recommend just working in WSL instead of natively on Windows to avoid these kinds of issues.
+
+#### pyenv for Linux and MacOSX
+
+Sources:
+- [Installation guide in pyenv README](https://github.com/pyenv/pyenv#installation)
+
+For Linux and MacOSX natively, and for Linux on WSL on Windows, we have to use the github distribution, clone it with `depth=1` to avoid downloading unnecessary past commits, and install it.
+
+Then we add the paths to `.bash_profile` for bash or to `.zprofile` for zsh.
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+cd ~
+git clone --depth=1 https://github.com/pyenv/pyenv.git ~/.pyenv
+cd ~/.pyenv && src/configure && make -C src
+cd ~
+r
+source ~/.bash_profile
+```
+
+And then we can add it to our PATH so that every time we open `python` it's the pyenv one and not the system one:
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bash_profile
+echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bash_profile
+echo 'eval "$(pyenv init -)"' >> ~/.bash_profile
+
+source ~/.bash_profile
+```
+
+For Dockerfiles:
+```Dockerfile
+# @ dockerfile
+
+USER root
+
+ENV HOME="/root"
+RUN git clone --depth=1 https://github.com/pyenv/pyenv.git ${HOME}/.pyenv
+ENV PYENV_ROOT="${HOME}/.pyenv"
+ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${PATH}"
+```
+
+
+#### pyenv-win for Windows
+
+If for some reason you are not using WSL for development (which I don't recommend), pyenv-win, which is a fork of pyenv specifically for installing windows versions of python. The benefit of this is it lets you install several versions of python at the same time and use different ones in different projects, without path conflicts.
+
+Let's follow the installation guide here:<br>
+https://github.com/pyenv-win/pyenv-win#installation
+
+```sh
+# @ git_bash
+
+git clone --depth=1 https://github.com/pyenv-win/pyenv-win.git "$HOME/.pyenv"
+```
+
+The next step is to add the pyenv paths to the PATH environmental variable so the git bash reads them correctly.
+
+There is two ways of doing this, but I chose option 1 because it's faster and can be copied to new machines.
+
+**Option 1) Adding the paths to .bashrc so they're added each time Git Bash is opened**
+
+```sh
+# @ git_bash
+
+nano ~/.bashrc
+```
+
+```sh
+# @ nano::~/.bashrc
+
+# PYENV paths
+export PATH=$PATH:~/.pyenv/pyenv-win/bin:~/.pyenv/pyenv-win/shims
+export PYENV=~/.pyenv/pyenv-win/
+export PYENV_ROOT=~/.pyenv/pyenv-win/
+export PYENV_HOME=~/.pyenv/pyenv-win/
+export PYENV_PYTHON_EXE=$(dirname $(pyenv.bat which python))
+export PATH=$PATH:$PYENV_PYTHON_EXE
+# To update PYENV_PYTHON_EXE if pyenv changes versions close bash and open again
+
+# CTRL+O
+# CTRL+X
+```
+
+```sh
+# @ git_bash
+
+source ~/.bashrc
+```
+
+
+**Option 2) Using Windows Settings**
+
+Go to System Properties, search for Environmental Variables and click the Environmental Variables button that results from an old fashioned settings window.
+Under User Environmental Variables add a NEW:
+
+```
+Variable name = PYENV
+Variable value= %USERPROFILE%\.pyenv\pyenv-win\
+```
+
+```
+Variable name = PYENV_ROOT
+Variable value= %USERPROFILE%\.pyenv\pyenv-win\
+```
+
+```
+Variable name = PYENV_HOME
+Variable value= %USERPROFILE%\.pyenv\pyenv-win\
+```
+
+Go to the User Environmental Variables again and select the Path variable, click Edit:
+
+In the edit window, add:
+```cmd
+%USERPROFILE%\.pyenv\pyenv-win\bin
+%USERPROFILE%\.pyenv\pyenv-win\shims
+```
+
+Click OK until all the windows go away.
+
+
+**Restart Git Bash**
+
+```sh
+# @ git_bash
+
+echo $PYENV
+echo $PATH
+```
+
+And the new environmental variables should be added.
+
+Now in Git Bash check if it works
+
+```sh
+# @ git_bash
+
+pyenv --version
+```
+
+Go to System Properties, search for Environmental Variables and click the Environmental Variables button that results from an old fashioned settings window.
+
+From the User Path variable: delete `%USERPROFILE%\AppData\Local\Microsoft\WindowsApps`, which is conflicting with the `python` command for some reason.
+
+Click OK until all the windows go away.
+
+**Restart Git Bash**
+
+Now if we just run `python` in Git Bash, it will hang instead of opening the interpreter. In order to run Python in Git Bash the same as we did in Unix based systems, [we have to go back to the `.bashrc` and add a path to the a new alias](https://qiita.com/birdwatcher/items/acbc79005d24616de5b6).
+
+```sh
+# @ git_bash
+
+nano ~/.bashrc
+```
+
+```sh
+# @ nano::~/.bashrc
+
+# To run Python in Git Bash like in Unix
+alias python='winpty python.exe'
+
+# CTRL+O
+# CTRL+X
+```
+
+```sh
+# @ git_bash
+
+source ~/.bashrc
+```
+
+Now typing `python` in Git Bash should open the python interface without hanging.
+
+To update pyenv-win, if installed via Git go to `%USERPROFILE%\.pyenv\pyenv-win` (which is your installed path) and run `git pull`.
+
+
+
+#### Install Python with pyenv / pyenv-win
+
+Now let's install and set the version we will use (`pyenv install -l` to check available versions).
+
+Currently I recommend python 3.11.9 because of some important packages that still aren't compatible with python 12, not to mention there is an available Docker image for python 3.11.9 available called [`3.11.9-bookworm`](https://github.com/docker-library/python/blob/811625e080937a4eca2055b8a31e382563e5b1a3/3.11/bookworm/Dockerfile)
+
+However, with GPU processing projects which use CUDA drivers, I recommend actually using the [Nvidia cuda docker containers](https://hub.docker.com/r/nvidia/cuda) and installing python with pyenv as well.
+
+I also, again, recommend keeping all the python execution on WSL and leaving windows alone, if not for consistency of execution, for the actual reason that most of the time these projects are executed in a Docker container anyways. So while technically you can install python with GitBash, I don't recommend using it for that.
+
+
+Also, it's worth noting that the installation process uses [some other dependencies we need to install first](https://github.com/pyenv/pyenv/wiki#suggested-build-environment).
+
+Make sure to follow those instructions before continuing, or the installations will fail.
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+pyenv install 3.11.9
+pyenv global 3.11.9
+pyenv rehash
+```
+
+We can confirm we are using the correct one:
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+pyenv versions
+which python
+python --version
+which pip
+pip --version
+```
+
+All these should now return pyenv versions.
+
+Let's also upgrade pip:
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+pip install --upgrade pip
+```
+
+### pipx
+
+[pipx](https://github.com/pypa/pipx) is a tool that isolates the environment for command line applications that use python. This way, your other projects won't be contaminated with incompatible dependencies without you noticing. It also makes it extremely easy to manage, install and uninstall tools that are not technically to be used as an imported library in this way. You can think of it as the `apt-get install` equivalent for python tools.
+
+Although the official installation guide allows for many ways of installing, I've had trouble running some of these inside Docker images, so I think the best option is actually to install via pip.
+
+Install for Linux/WSL
+```sh
+# @ shell(linux/wsl)
+
+sudo apt-get update
+sudo apt-get install pipx
+```
+
+Install for MacOSX
+```sh
+# @ shell(mac_osx)
+
+brew install pipx
+```
+
+Finish setting up:
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+pipx ensurepath
+sudo pipx ensurepath --global # optional to allow pipx actions with --global argument
+```
+
+However, on Dockerfiles, `ensurepath` won't work, so we set the environment variables manually:
+```
+# @ dockerfile
+USER root
+
+RUN pip install pipx
+ENV PATH="${PATH}:/root/.local/bin"
+```
+
+### Poetry for python project / dependency management
+
+Python has been moving away from using `requirements.txt` or `setup.py` to build or install packages, and instead focusing on preparing an independent `pyproject.toml` that specifies build requirements as well as runtime requirements in a way that they can be run automatically. This is outlined in [PEP 517](https://peps.python.org/pep-0517/). Using this building environment, several other packaging tools emerged. While I haven't tested them all, I have chosen Poetry.
+
+[Poetry](https://python-poetry.org/) will not only isolate development environments, but it will recursively check all dependencies, and the dependencies of those dependencies, so that the final installation of a python project doesn't have any incompatible installations. If a package is incompatible for some reason, it will not install that package, and then output the reason. It has saved me from many headaches in the development of many projects. 
+
+It also allows for you to commit the final conclusion of those dependency checks in a file called `poetry.lock`, so that any developer installing the project will have the same environment as the person who did the commit. This, of course, also allows you to go back in a commit history and match the environment to the commit. It also allows for removal of dependencies in a way that will re-check all other packages to see if they can be updated after lifting restrictions. 
+
+I also use the `poetry-plugin-export` plugin to potentially output all of these dependency checks onto a less space heavy requirements.txt so as to use in deploy Docker images, which focus on saving as much space on the image as possible.
+
+#### Install poetry with pipx
+
+- [ ] poetry / poetry plugin export
+        - [ ] https://python-poetry.org/docs/#installing-with-pipx
+        - [ ] `pipx install poetry && pipx inject poetry poetry-plugin-export`
+
+
+
+Usage guide: https://python-poetry.org/
+
+Making a new project can be as easy as:
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+poetry new project-name-here
+cd project-name-here
+```
+
+Then, instead of using `pip install` or `pip uninstall` we use `poetry add`
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+poetry add pathlib
+```
+
+This updates the dependency control files `poetry.toml`, `poetry.lock`, and `pyproject.toml`, which can be committed to version control.
+
+And finally, when cloning a repository, you can use `poetry install` to easily install all the dependencies controlled by poetry in one command.
+
+#### Usage
+
+- Follow the [official Poetry documentation](https://python-poetry.org/docs/basic-usage/)
+- See [Poetry GitHub issues](https://github.com/python-poetry/poetry/issues) for undocumented problems
+- For complicated cases involving GPU or CUDA specific builds, or C++ extensions that are built from source, refer to my personal [Poetry C++ extensions guide](/docs/ai_development/Poetry-C++-extensions-guide.md)
+
+
+
+
+
+
+
+
+
+
+#### Docker + poetry
+
+
+
+
+
+
+
+
+
+
+### toml-cli
+
+
+- [ ] toml-cli
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+pipx install toml-cli
+```
 
 ## IDE / Editors
 
 ### Sublime Text
 
-- Install SublimeText4 for ease of use (this is my personal favorite, but it's not necessary)
+[Sublime Text](https://www.sublimetext.com/) has been my go-to text editor for development, academic writing, hobby writing, and just about any writing ever.
 
-#### Install SublimeText on Windows and MacOSX
+I don't even use Word for PDFs, but rather would use Sublime Text and LaTeX to compile a PDF when absolutely necessary for some reason.
 
+It is great for many reasons:
 
-https://www.sublimetext.com/download
+- Useful split panes for multiple files, or split view of different sections of the same file
+- I get to edit multiple lines at once
+- Shows definitions of functions
+- Multi-language syntax highlighting, and syntax specific auto-completions save a lot of time.
+- Has a save-state of the opened code even if you haven't saved a file (life-saver in crashes)
+- Robust find and replace functions
+- Has about as many open-source plugins written in Python with cool capabilities as you can think of.
+- I can copy paste the settings whenever I get a new machine or environment!
+- I can copy paste the license as well, which makes it really easy to setup.
 
+But *most importantly*, unlike other editors (VSCode I'm looking at you), it is not based on [Electron](https://www.electronjs.org/apps), making it **absurdly lightweight and fast** in comparison. 
 
-#### Install SublimeText on linux
+#### Install Sublime Text
 
+- [SublimeText Windows and MacOSX download](https://www.sublimetext.com/download)
+- [SublimeText Linux Repositories](https://www.sublimetext.com/docs/linux_repositories.html)
 
-https://www.sublimetext.com/docs/linux_repositories.html
+```sh
+# @ shell(linux/wsl)
 
-```
 wget -qO - https://download.sublimetext.com/sublimehq-pub.gpg | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/sublimehq-archive.gpg
 
 sudo apt-get update
@@ -47,43 +445,57 @@ sudo apt-get install sublime-text
 
 #### Setup SublimeText
 
-- Paste the SublimeText4 preferences (my personal preferences)
+Sublime Text is all about the plugins. 
 
-```
-{
-    "ignored_packages":
-    [
-        "Vintage",
-    ],
-    "spell_check": true,
-    "tab_size": 4,
-    "translate_tabs_to_spaces": true,
-    "copy_with_empty_selection": false
-}
-```
-
-Also, Sublime Text is all about the plugins. Install Package Control by typing CTRL+Shift+P, then typing "Install Package Control"
+Install Package Control by typing `CTRL+Shift+P`, then typing `Install Package Control`.
 
 Then here's some cool packages to try:
 
-- [LaTeXTools](https://packagecontrol.io/packages/LaTeXTools)
-- [MarkdownTOC](https://packagecontrol.io/packages/MarkdownTOC)
-- [MarkdownPreview](https://packagecontrol.io/packages/MarkdownPreview)
-- [MarkdownEditing](https://packagecontrol.io/packages/MarkdownEditing)
 - [Alignment](https://packagecontrol.io/packages/Alignment)
+    - Perfect to align texts in docstrings or markdown tables
+- [AutoFoldCode](https://packagecontrol.io/packages/AutoFoldCode)
+- [ConvertToUTF8](https://packagecontrol.io/packages/ConvertToUTF8)
+- [Dockerfile Syntax Highlighting](https://packagecontrol.io/packages/Dockerfile%20Syntax%20Highlighting)
+- [EasyDiff](https://packagecontrol.io/packages/EasyDiff)
+    - Note: this is extremely useful for development memo taking, but it can be a bit process heavy
+- [Fold Python](https://packagecontrol.io/packages/Fold%20Python)
 - [IncrementSelection](https://packagecontrol.io/packages/Increment%20Selection)
-- [Selection Evaluator](https://packagecontrol.io/packages/Selection%20Evaluator)
-- [Paste as One Line](https://packagecontrol.io/packages/Paste%20as%20One%20Line)
-- [Invert Current Color Scheme](https://packagecontrol.io/packages/Invert%20Current%20Color%20Scheme)
+    - When selecting several instances of the same number, increases by 1 each selection. 
+    - Useful to make numbered rows in a text or CSV file.
+    - Useful to turn unnumbered lists into numbered lists in Markdown documents
+- [LaTeXTools](https://packagecontrol.io/packages/LaTeXTools)
+    - [Automatically insert list patterns](https://tex.stackexchange.com/a/85487)
+    - Can build PDFs from Sublime directly
+    - Smart command completion for text and math commands
+    - Word counts, and more
+- [Markdown Code Blocks](https://packagecontrol.io/packages/Markdown%20Code%20Blocks)
+- [MarkdownCodeBlockWrapper](https://packagecontrol.io/packages/MarkdownCodeBlockWrapper)
+    - Select code, shortcut, now it has the ` back-tick wrapping
+- [MarkdownEditing](https://packagecontrol.io/packages/MarkdownEditing)
+- [MarkdownPreview](https://packagecontrol.io/packages/MarkdownPreview)
+- [MarkdownTOC](https://packagecontrol.io/packages/MarkdownTOC)
 - [PackageResourceViewer](https://packagecontrol.io/packages/PackageResourceViewer)
+- [Paste as One Line](https://packagecontrol.io/packages/Paste%20as%20One%20Line)
+- [Python PEP8 Autoformat](https://packagecontrol.io/packages/Python%20PEP8%20Autoformat)
+    - Haven't tried it yet, sounds promising.
+- [Python Pretty Print](https://packagecontrol.io/packages/Python%20Pretty%20Print)
+    - Haven't tried it on Sublime Text yet, but `pprint` is something I use frequently on python. Sounds promising.
+- [Selection Evaluator](https://packagecontrol.io/packages/Selection%20Evaluator)
+- [TOML](https://packagecontrol.io/packages/TOML)- Adds syntax highlight for TOML files
 
-Now, for the Invert Current Color Scheme, I have my own fork that works with Sublime Text 4, so use the PackageResourceViewer to replace the main python file with my code:
- 
-https://github.com/elisa-aleman/sublime-invert-current-color-scheme
+<!-- - [Invert Current Color Scheme](https://packagecontrol.io/packages/Invert%20Current%20Color%20Scheme) -->
+<!--    - Last supported on Sublime Text 2. Stopped working on Sublime Text 3, we are at Sublime Text 4 now. -->
+<!-- Now, for the Invert Current Color Scheme, I have my own fork that works with Sublime Text 4, so use the PackageResourceViewer to replace the main python file with my code:
+https://github.com/elisa-aleman/sublime-invert-current-color-scheme 
 
-In MarkdownTOC.sublime-settings, paste the following for hyperlink markdowns and compatibility with MarkdownPreview:
+Except I never got the invert theme to work
+-->
+You could also [Make and submit your own package](https://packagecontrol.io/docs/submitting_a_package) if you have a good idea for a plugin.
 
-```
+
+In `MarkdownTOC.sublime-settings`, paste the following for hyperlink markdowns and compatibility with MarkdownPreview:
+
+```jsonc
 {
   "defaults": {
     "autoanchor": true,
@@ -94,27 +506,53 @@ In MarkdownTOC.sublime-settings, paste the following for hyperlink markdowns and
 }
 ```
 
-After installing Markdown Editing, add this to the SublimeText4 preferences (my personal preferences)
+After installing Markdown Editing, paste these Sublime Text 4 preferences (my personal preferences)
 
-```
-"mde.auto_fold_link.enabled": false,
+```jsonc
+{
+    "ignored_packages":
+    [
+        "Vintage",
+    ],
+    "spell_check": true,
+    "tab_size": 4,
+    "translate_tabs_to_spaces": true,
+    "copy_with_empty_selection": false,
+    "mde.auto_fold_link.enabled": false,
+}
 ```
 
-<a id="easy-tex-math-add-paired--signs-to-the-keybinds"></a>
+I also make Makefile files from time to time, and they don't allow the use of spaces instead of tabs, however I prefer to use spaces instead of tabs on Python.
+
+So to add a syntax specific setting:
+
+1) Open a new file
+2) Change syntax to Makefile with `CTRL+SHIFT+P` then type `Makefile` and click on `Set Syntax: Makefile`
+3) Preferences -> Settings - Syntax Specific
+4) Paste the following
+
+```jsonc
+{
+    "translate_tabs_to_spaces": false,
+}
+```
+
+save and close
+
 #### Easy TeX math: Add paired $ signs to the keybinds
 
-I found myself needing paired $dollar signs$ for math expressions in either LaTeX, GitLab with KeTeX or GitHub also with a different syntax but still some interpretation of TeX.
+I found myself needing paired \$dollar signs\$ for math expressions in either LaTeX, GitLab with KeTeX or GitHub also with a different syntax but still some interpretation of TeX.
 
-Searching for [how to do it on macros](https://forum.sublimetext.com/t/snippet-wrap-current-line-or-selection/53285), I found this post about keybindings which is a way better solution:
-
-https://stackoverflow.com/questions/34115090/sublime-text-2-trying-to-escape-the-dollar-sign
+Searching for [how to do it on macros](https://forum.sublimetext.com/t/snippet-wrap-current-line-or-selection/53285), I found [this post about keybindings](https://stackoverflow.com/questions/34115090/sublime-text-2-trying-to-escape-the-dollar-sign) which is a way better solution.
 
 Which, as long as we implement the double escaped dollar sign solution, we can use freely.
+
+I then also added `{ "key": "selector", "operator": "equal", "operand": "source.text.tex" },` and `{ "key": "selector", "operator": "equal", "operand": "text.html.markdown" },` to the above solution, so that this only gets implemented in the languages I use dollar sign pairing.
 
 - Preferences > Key Bindings:
 - Add this inside the brackets:
 
-```
+```jsonc
 [
     // Auto-pair dollar signs on TeX or LaTeX
     { "keys": ["$"], "command": "insert_snippet", "args": {"contents": "\\$$0\\$"}, "context":
@@ -190,310 +628,103 @@ Which, as long as we implement the double escaped dollar sign solution, we can u
 
 ```
 
-<a id="easily-transform-2-spaced-indent-to-4-spaced-indent"></a>
-### Easily transform 2 spaced indent to 4 spaced indent
 
-https://forum.sublimetext.com/t/can-i-easily-change-all-existing-2-space-indents-to-4-space-indents/40158/2
+#### Easily transform 2 spaced indent to 4 spaced indent
 
-- Sublime text, lower right corner
-- Click on Spaces
-- Select the current space number
-- Click Convert indentation to Tabs
-- Select the desired space number
-- Click Convert indentation to Spaces
+At first, I was confused on how to change code I copied with 2 space indent into 4 space indent, but then I found [this post](https://forum.sublimetext.com/t/can-i-easily-change-all-existing-2-space-indents-to-4-space-indents/40158/2).
 
+1) Sublime text, lower right corner
+2) Click on Spaces
+3) Select the current space number
+4) Click Convert indentation to Tabs
+5) Select the desired space number
+6) Click Convert indentation to Spaces
 
 ### Sublime Merge
 
-## Terminals
+Whereas I used to only do command line git commits most of the time for years on end, [Sublime Merge](https://www.sublimemerge.com/) came out in 2018, where it went unnoticed for a while, and ignored since I was so used to the command line. But recently I rediscovered it, realized all the benefits it can add to my workflow and helped me also stop using Git Bash only for committing. Now I can focus all my terminal use on WSL if I'm working in Windows. This is a non-issue in Linux, however.
 
-- [ ] Terminals
-    - [ ] Windows Terminal + Cmder
-        - [ ] https://medium.com/talpor/windows-terminal-cmder-%EF%B8%8F-573e6890d143 
-        - https://windowsterminalthemes.dev/
-        - Starting directory can be /mnt/d/...
-        - Make sure it's the `C:\Windows\system32\wsl.exe -d Ubuntu` and not the `ubuntu.exe` profile.
-        - `C:\Windows\system32\wsl.exe -d Ubuntu --exec bash -l` to start in bash instead of sh]
-    - [ ] iTerm2
+Sublime Merge allows you to see the commit history in a more understandable way, allows you to examine the difference in files before staging anything, and generally provides a more complete way to write good and comprehensive commit messages for the future developers trying to figure out just what changed. I have had my run of very backwards compatibility breaking changes having just a single line describing the commit, too many times. I will try to not contribute to that in the future.
 
+It also allows you to blame specific lines of code, or to cherry pick lines of code! This last one is one that I can't wait to use at some point.
 
-### Windows
+Also, installing it will provide extra functionality within Sublime Text when the two are connected.
 
-### MacOSX
-
-### Linux
-
-
- 
-## Environment and CLI tools
-
-### anyenv
-
-- [ ] anyenv (mac and linux)
-        - [ ] https://github.com/anyenv/anyenv
-        - [ ] clone, add path for bash
-        - [ ] `echo 'eval "$(anyenv init -)"' >> ~/.bash_profile`, remove the hyphen suggested.
-        - [ ] A warning will appear if I don't have a manifest directory
-        - [ ] `mkdir ~/.config`
-        - [ ] `anyenv install --init`
-        - [ ] Actually pyenv latest version does not work with it so don't use or recommend for pyenv
-
-
-### pyenv / pyenv-win
-
-TODO: RE-check tutorial
-
-Depending on your installation, you might already have a python, but it is better to avoid using it as it interacts with the system, so we install a local version with Pyenv. Pyenv also makes it so that pip and python are always matched for each other in the correct version.
-
-This is specially useful if you need different versions for different projects (Maybe caused by incompatible updates).
-
-- [ ] pyenv / pyenv-win
-        - [ ] https://github.com/pyenv/pyenv
-        - [ ] `pyenv install 3.11.7` since 3.12 is not yet compatible with many projects.
-
-
-#### pyenv for Linux and MacOSX
-
-
-https://github.com/pyenv/pyenv#installation
-
-For Linux and MacOSX natively, and for Linux on WSL on Windows, we have to use the github distribution, clone it and install it.
-
-Then we add the paths to `.bash_profile` for bash or to `.zprofile` for zsh.
-
-```
-cd ~
-git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-cd ~/.pyenv && src/configure && make -C src
-cd ~
-
-source ~/.bash_profile
-```
-
-And then we can add it to our PATH so that every time we open `python` it's the pyenv one and not the system one:
-
-```
-echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bash_profile
-echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bash_profile
-echo 'eval "$(pyenv init -)"' >> ~/.bash_profile
-
-source ~/.bash_profile
-```
-
-
-#### pyenv-win for Windows
-
-If for some reason you are not using WSL for development (which I don't recommend), pyenv-win, which is a fork of pyenv specifically for installing windows versions of python. The benefit of this is it lets you install several versions of python at the same time and use different ones in different projects, without path conflicts.
-
-Let's follow the installation guide here:<br>
-https://github.com/pyenv-win/pyenv-win#installation
-
-```
-git clone https://github.com/pyenv-win/pyenv-win.git "$HOME/.pyenv"
-```
-
-The next step is to add the pyenv paths to the PATH environmental variable so the git bash reads them correctly.
-
-There is two ways of doing this, but I chose option 1 because it's faster and can be copied to new machines.
-
-**Option 1) Adding the paths to .bashrc so they're added each time Git Bash is opened**
-
-```
-nano ~/.bashrc
-
----- add in nano interface---
-# PYENV paths
-export PATH=$PATH:~/.pyenv/pyenv-win/bin:~/.pyenv/pyenv-win/shims
-export PYENV=~/.pyenv/pyenv-win/
-export PYENV_ROOT=~/.pyenv/pyenv-win/
-export PYENV_HOME=~/.pyenv/pyenv-win/
-export PYENV_PYTHON_EXE=$(dirname $(pyenv.bat which python))
-export PATH=$PATH:$PYENV_PYTHON_EXE
-# To update PYENV_PYTHON_EXE if pyenv changes versions close bash and open again
-
-CTRL+O
-CTRL+X
---------------------
-source ~/.bashrc
-```
-
-
-**Option 2) Using Windows Settings**
-
-Go to System Properties, search for Environmental Variables and click the Environmental Variables button that results from an old fashioned settings window.
-Under User Environmental Variables add a NEW:
-
-```
-Variable name = PYENV
-Variable value= %USERPROFILE%\.pyenv\pyenv-win\
-```
-```
-Variable name = PYENV_ROOT
-Variable value= %USERPROFILE%\.pyenv\pyenv-win\
-```
-```
-Variable name = PYENV_HOME
-Variable value= %USERPROFILE%\.pyenv\pyenv-win\
-```
-
-Go to the User Environmental Variables again and select the Path variable, click Edit:
-
-In the edit window, add:
-```
-%USERPROFILE%\.pyenv\pyenv-win\bin
-%USERPROFILE%\.pyenv\pyenv-win\shims
-```
-
-Click OK until all the windows go away.
-
-
-**Restart Git Bash**
-
-```
-echo $PYENV
-echo $PATH
-```
-
-And the new environmental variables should be added.
-
-Now in Git Bash check if it works
-
-```
-pyenv --version
-```
-
-Go to System Properties, search for Environmental Variables and click the Environmental Variables button that results from an old fashioned settings window.
-
-From the User Path variable: delete `%USERPROFILE%\AppData\Local\Microsoft\WindowsApps`, which is conflicting with the `python` command for some reason.
-
-Click OK until all the windows go away.
-
-**Restart Git Bash**
-
-Now if we just run `python` in Git Bash, it will hang instead of opening the interpreter. In order to run Python in Git Bash the same as we did in Unix based systems, we have to go back to the `.bashrc` and add a path to the a new alias.
-
-```
-nano ~/.bashrc
-----nano interface---
-# To run Python in Git Bash like in Unix
-alias python='winpty python.exe'
-CTRL+O
-CTRL+X
-source ~/.bashrc
---------------------
-```
-
-\* Solution gotten from:<br>
-https://qiita.com/birdwatcher/items/acbc79005d24616de5b6
-
-Now typing `python` in Git Bash should open the python interface without hanging.
-
-To update pyenv-win, if installed via Git go to `%USERPROFILE%\.pyenv\pyenv-win` (which is your installed path) and run `git pull`.
-
-#### Install Python with pyenv / pyenv-win
-
-Now let's install and set the version we will use (`pyenv install -l` to check available versions).
-
-```
-pyenv install 3.10.7
-pyenv global 3.10.7
-```
-
-We can confirm we are using the correct one:
-
-```
-pyenv versions
-which python
-python --version
-which pip
-pip --version
-```
-
-
-All these should now return pyenv versions.
-
-Let's also upgrade pip:
-```
-pip install --upgrade pip
-```
-
-
-### pipx
-
-
-- [ ] pipx
-        - [ ] https://github.com/pypa/pipx
-
-
-### Poetry for python project / dependency management
-
-[Poetry](https://python-poetry.org/) 
-
-TODO: rewrite section with pipx and docker added explanation
-
-<!-- 
-Poetry is a tool to manage python project dependencies and environments in a version controlled (e.g. git) and group accessible syntax. It allows to use a virtual environment to locally install all dependencies, remove or update them as needed while having access to previous instances of the environment at a given time via the commit history
-
-
-- [ ] poetry / poetry plugin export
-        - [ ] https://python-poetry.org/docs/#installing-with-pipx
-        - [ ] `pipx install poetry && pipx inject poetry poetry-plugin-export`
-
-
-
-Usage guide: https://python-poetry.org/
-
-Making a new project can be as easy as:
-
-```
-poetry new project-name-here
-cd project-name-here
-```
-
-Then, instead of using `pip install` or `pip uninstall` we use `poetry add`
-
-```
-poetry add pathlib
-```
-
-This updates the dependency control files `poetry.toml`, `poetry.lock`, and `pyproject.toml`, which can be committed to version control.
-
-And finally, when cloning a repository, you can use `poetry install` to easily install all the dependencies controlled by poetry in one command.
- -->
-
-### toml-cli
-
-
-- [ ] toml-cli
-        - [ ] `pipx install toml-cli`
-
-
+So in summary:
+- Better visualization of the commit history
+- Easy diff view
+- Allows you to craft better commit messages
+- 
 
 ## Documents and Planning
 
-### Mermaid
+### Mermaid for Markdown code block graphs and diagrams
 
-### Markmap
+[Mermaid](https://mermaid.js.org/) is a GitHub and GitLab compatible diagram and graph JavaScript compiler that can be added to documentation with simple Markdown code blocks.
+
+In README.md files, or any markdown document in a repository, it is compatible to insert most graphs (but not all) directly into the document like so:
+
+`````Markdown
+```mermaid
+graph TD
+    A["Some *markdown* text"] --> B["Some **other** *markdown* text"]
+    A --> a_single_node
+    B -.-> great
+    a_single_node --|some text in between|-->great
+```
+`````
+
+Which renders as:
+
+```mermaid
+graph TD
+    A["Some *markdown* text"] --> B["Some **other** *markdown* text"]
+    A --> a_single_node
+    B -.-> great
+    a_single_node --|some text in between|-->great
+```
+
+There's tons of options for different diagrams. My favorite are:
+
+- FLowcharts
+- Sequence Diagrams
+- Class Diagrams
+- Gitgraph Diagram
+- Gantt charts
+
+If you would rather see your work as you write it, there is the `mermaid-cli` and the [Mermaid Sublime Text Plugin](https://packagecontrol.io/packages/Mermaid), ...
+
+but I would rather just use the [Mermaid Live Editor](https://mermaid.live) since it provides me with the option to get example graphs, export graphs, and most importantly, generate copy-paste links for incompatible graph types.
+
+As I said before, not all the types of diagrams are executed in GitHub or GitLab, but the links work regardless if you paste it in a document, inside an issue, in a comment on GitHub on an Issue discussion, or even in some chats that execute markdown such as Slack or Typetalk.
+
+### markmap for great looking markdown mindmaps
+
+[markmap](https://markmap.js.org/) is for markdown diagram generation everything mermaid lacked for the mindmaps.
+
+They look great, but have less copy-paste in-document availability than I'd like.
+
+For example, they're not codeblock based, but rather take an entire document, and they can be downloaded as an interactive HTML, which, good luck embedding that.
+
+However, I think it's still a good tool for isolated uses.
 
 ### GitHub/GitLab flavored markdown math
 
 #### GitHub Markdown math expressions for README.md, etc.
 
-Following this guide, math is different in GitLab markdown than say, GitHub or LaTeX.
+Following this guide, [math is different in GitLab markdown](https://docs.gitlab.com/ee/user/markdown.html#math) than say, GitHub or LaTeX.
 However, inside of the delimiters, it renders it using KaTeX, which uses LaTeX math syntax! 
 
-https://docs.gitlab.com/ee/user/markdown.html#math
-
 Inline: 
-```
-> $a^2 + b^2 = c^2$
+```tex
+$a^2 + b^2 = c^2$
 ```
 
 Renders as: $a^2 + b^2 = c^2$
 
 Block:
-```
-> $$a^2 + b^2 = c^2$$
+```tex
+$$a^2 + b^2 = c^2$$
 ```
 
 Renders as:
@@ -502,11 +733,13 @@ $$a^2 + b^2 = c^2$$
 
 But it only supports one line of math, so for multiple lines you have to do this:
 
+```tex
+$$a^2 + b^2 = c^2$$
+
+$$c = \sqrt{ a^2 + b^2 }$$
 ```
-> $$a^2 + b^2 = c^2$$
-> <!-- (line break is important) -->
-> $$c = \sqrt{ a^2 + b^2 }$$
-```
+
+The line break is important!!
 
 Renders as:
 
@@ -516,22 +749,22 @@ $$c = \sqrt{ a^2 + b^2 }$$
 
 It can even display matrices and the like:
 
-```
-> $$
-> l_1 = 
-> \begin{bmatrix}
->     \begin{bmatrix}
->         x_1 & y_1
->     \end{bmatrix} \\
->     \begin{bmatrix}
->         x_2 & y_2
->     \end{bmatrix} \\
->     ... \\
->     \begin{bmatrix}
->         x_n & y_n
->     \end{bmatrix} \\
-> \end{bmatrix}
-> $$
+```tex
+$$
+l_1 = 
+\begin{bmatrix}
+    \begin{bmatrix}
+        x_1 & y_1
+    \end{bmatrix} \\
+    \begin{bmatrix}
+        x_2 & y_2
+    \end{bmatrix} \\
+    ... \\
+    \begin{bmatrix}
+        x_n & y_n
+    \end{bmatrix} \\
+\end{bmatrix}
+$$
 ```
 
 $$
@@ -551,11 +784,10 @@ l_1 =
 $$
 
 
-However, % comments will break the environment.
+However, `%` comments will break the environment, so it's not fully tex.
 
-Math syntax in LaTeX:
-
-https://katex.org/docs/supported.html
+See more:
+- [Math syntax in LaTeX: Katex supported documentation](https://katex.org/docs/supported.html):
 
 
 #### GitLab Markdown math expressions for README.md, etc.
@@ -566,18 +798,18 @@ However, inside of the delimiters, it renders it using KaTeX, which uses LaTeX m
 https://docs.gitlab.com/ee/user/markdown.html#math
 
 Inline: 
-```
-> $`a^2 + b^2 = c^2`$
+```Markdown
+$`a^2 + b^2 = c^2`$
 ```
 
 Renders as: $`a^2 + b^2 = c^2`$
 
 Block:
+````Markdown
+```math
+a^2 + b^2 = c^2
 ```
-> ```math
-> a^2 + b^2 = c^2
-> ```
-```
+````
 
 Renders as:
 
@@ -587,14 +819,14 @@ a^2 + b^2 = c^2
 
 But it only supports one line of math, so for multiple lines you have to do this:
 
+````Markdown
+```math
+a^2 + b^2 = c^2
 ```
-> ```math
-> a^2 + b^2 = c^2
-> ```
-> ```math
-> c = \sqrt{ a^2 + b^2 }
-> ```
+```math
+c = \sqrt{ a^2 + b^2 }
 ```
+````
 
 Renders as:
 
@@ -607,23 +839,23 @@ c = \sqrt{ a^2 + b^2 }
 
 It can even display matrices and the like:
 
+````Markdown
+```math
+l_1 = 
+\begin{bmatrix}
+    \begin{bmatrix}
+        x_1 & y_1
+    \end{bmatrix} \\
+    \begin{bmatrix}
+        x_2 & y_2
+    \end{bmatrix} \\
+    ... \\
+    \begin{bmatrix}
+        x_n & y_n
+    \end{bmatrix} \\
+\end{bmatrix}
 ```
-> ```math
-> l_1 = 
-> \begin{bmatrix}
->     \begin{bmatrix}
->         x_1 & y_1
->     \end{bmatrix} \\
->     \begin{bmatrix}
->         x_2 & y_2
->     \end{bmatrix} \\
->     ... \\
->     \begin{bmatrix}
->         x_n & y_n
->     \end{bmatrix} \\
-> \end{bmatrix}
-> ```
-```
+````
 
 ```math
 l_1 = 
@@ -641,15 +873,15 @@ l_1 =
 \end{bmatrix}
 ```
 
-However, % comments will break the environment.
+However, `%` comments will break the environment.
 
-Math syntax in LaTeX:
+See more:
+- [Math syntax in LaTeX: Katex supported documentation](https://katex.org/docs/supported.html):
 
-https://katex.org/docs/supported.html
 
 ### LaTeX for documentation / reports
 
-I use LaTeX for writing detailed reports, curriculum vitae documents, resumes, academic publication history, or cover letters. The files are way lighter than whatever mess you can make with other word editors, and it gives me precise control over how the document will look in the end.
+I use [LaTeX](https://www.latex-project.org/) for writing detailed reports, curriculum vitae documents, resumes, academic publication history, or cover letters. The files are way lighter than whatever mess you can make with other word editors, and it gives me precise control over how the document will look in the end.
 
 For every installation method described below, a few other useful packages aside from just LaTeX along with it, including `latexdiff` which I used a lot to compare revisions on academic papers, or `bibtex` for bibliography parsing, among others.
 
@@ -657,15 +889,9 @@ For every installation method described below, a few other useful packages aside
 
 ##### LaTeX on Windows
 
-https://www.latex-project.org/
+Because I'm used to Unix systems already, the most usable packaging that offers that similarity across systems seems to be [TeXLive](https://tug.org/texlive/windows.html).
 
-Because I'm used to Unix systems already, the most usable packaging that offers that similarity across systems seems to be TeXLive.
-
-https://tug.org/texlive/windows.html
-
-Download the installer and run:
-
-https://mirror.ctan.org/systems/texlive/tlnet/install-tl-windows.exe
+[Download the installer](https://mirror.ctan.org/systems/texlive/tlnet/install-tl-windows.exe) and run:
 
 Make sure default paper is A4.
 
@@ -681,11 +907,7 @@ If you need to configure Tex Live using `tlmgr`, it's necessary to run the comma
 
 Download the `.pkg` file and install it manually from the [mactex download website](https://www.tug.org/mactex/downloading.html)
 
-It is installed under `/Library/TeX/texbin`, but if you have any terminal sessions open it will probably not load, so you should open a new session, and then confirm that it also installed `latexdiff` with:
-
-```
-which latexdiff
-```
+It is installed under `/Library/TeX/texbin`, but if you have any terminal sessions open it will probably not load, so you should open a new session.
 
 ##### LaTeX on Linux
 
@@ -693,15 +915,30 @@ The installation on Linux is straight-forward:
 
 The specific package for LaTeX on linux has different versions depending on how many of the accompanying packages you wish to install. [You can read about the differences here](https://tex.stackexchange.com/questions/245982/differences-between-texlive-packages-in-linux). I prefer `texlive-latex-extra`, one step below the largest installation of them all.
 
-```
+```sh
+# @ shell(linux/wsl)
 sudo apt install texlive-latex-extra
 sudo apt-get install latexdiff
 ```
 
+##### Confirm install
+
+Confirm that it installed with:
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+which pdflatex
+which xelatex
+which latexdiff
+
+```
+
+And so on for the relevant packages.
 
 #### Use my LaTeX helper shell scripts for faster compilation
 
-https://github.com/elisa-aleman/latex_helpers
+Source:
+- [LaTeX helpers](https://github.com/elisa-aleman/latex_helpers)
 
 I made these shell scripts to help in compiling faster when using bibliographies and to delete cumbersome files when not necessary every time I compile. Since they are .sh scripts, they run normally with git bash or the enhanced cmder on windows and run natively on shells in Linux and MacOSX.
 
@@ -713,7 +950,9 @@ So I made [LaTeX helpers](https://github.com/elisa-aleman/latex_helpers), a coup
 
 So instead of typing
 
-```
+```sh
+# @ shell(linux/mac_osx/wsl)
+
 pdflatex paper.tex
 bibtex paper
 pdflatex paper.tex
@@ -725,13 +964,18 @@ rm paper.log paper.out paper.aux paper.... and so on
 Every. Single. Time. 
 
 I just need to type:
-```
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
 ./latexcompile.sh paper.tex --view --clean
 ```
 
 and if I needed to make a latexdiff I just:
 
-```
+```sh
+# @ shell(linux/mac_osx/wsl)
+
 ./my_latexdiff.sh paper_V1-1.tex paper.tex --newversion="2" --compile --view --clean
 ```
 
@@ -741,38 +985,54 @@ I would also commonly have several documents of different languages, or save my 
 
 Usually with code such as:
 
-```
-cd en
-./latexcompile.sh paper.tex --view --clean --xelatex
-cd ../es
-./latexcompile.sh paper.tex --view --clean --xelatex
-cd ../jp
-./latexcompile.sh paper.tex --view --clean --xelatex
+```sh
+# @ compile_langs.sh
+
+SCRIPT=$(realpath "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
+latexcompile=$SCRIPTPATH/latexcompile.sh
+
+INFILE="$1"
+DOCNAME="${INFILE%.*}"
+echo "Compiling with ${latexcompile} for languages en, es, jp: $@"
+
+cd en && $latexcompile "$@"; cd ..
+cd es && $latexcompile "$@"; cd ..
+cd jp && $latexcompile "$@"; cd ..
 ```
 
-And so on, to save time.
+So then I can just call
+
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+./compile_langs.sh my_document -x -v -c
+```
+
+And so on. 
 
 
 #### Make LaTeX easier in Sublime Text:
 
 - Install Package Control.
-- Install LaTeXTools plugin.
+    - Install Package Control by typing `CTRL+Shift+P`, then typing `Install Package Control`.
+- Install [LaTeXTools](https://packagecontrol.io/packages/LaTeXTools) plugin.
+    - [Automatically insert list patterns](https://tex.stackexchange.com/a/85487)
+    - Can build PDFs from Sublime directly
+    - Smart command completion for text and math commands
+    - Word counts, and more
 
-https://tex.stackexchange.com/a/85487
-
-If you have the LaTeXTools plugin, it already does that except that it is mapped on Shift+Enter instead of Enter.
-
-<a id="xelatex-in-japanese"></a>
 #### XeLaTeX in Japanese
 
 For Japanese UTF-8 text in XeLaTeX:
 
-``` 
+``` tex
 \usepackage{xeCJK}
 ```
 
 Set the fonts: these are the default, but they have no bold
-```
+```tex
 \setCJKmainfont{IPAMincho} % No bold, serif
 \setCJKsansfont{IPAGothic} % No bold, sans-serif
 \setCJKmonofont{IPAGothic} % No bold, sans-serif
@@ -788,13 +1048,13 @@ https://stackoverflow.com/questions/55264642/how-to-force-win10-to-install-fonts
 
 Set the installed font:
 
-```
+```tex
 \setCJKmainfont[BoldFont=AozoraMincho-bold,AutoFakeSlant=0.15]{Aozora Mincho}
 ```
 
 Japanse document style:
 
-```
+```tex
 \usepackage[english,japanese]{babel} % For Japanese date format
 \usepackage{indentfirst} % For Japanese style indentation
 \setlength\parindent{11pt}
@@ -802,16 +1062,43 @@ Japanse document style:
 
 Japanese babel messes itemize up inside tables, so:
 
-```
+```tex
 \usepackage{enumitem}
 \newlist{jpcompactitemize}{itemize}{1} % defined new list
 \setlist[jpcompactitemize]{topsep=0em, itemsep=-0.5em, label=\textbullet} % new list setup
 ```
 
 
+In the end, my Japanese document setup looks like this:
+
+```tex
+% !TeX program = XeLaTeX
+% !TeX encoding = UTF-8
+
+\documentclass[11pt]{article} % or whatever you like for your document
+
+% For Japanese UTF-8 text in XeLaTeX
+\usepackage{xeCJK}
+% \setCJKmainfont{IPAMincho} % No bold
+% \setCJKsansfont{IPAGothic} % No bold
+% \setCJKmonofont{IPAGothic} % No bold
+%%% Installing fonts
+% https://launchpad.net/takao-fonts 
+% \setCJKmainfont{TakaoMincho} % still no bold but now it recognizes it
+%%% Aozora mincho has guaranteed bold
+% https://web.archive.org/web/20200321102301/http://blueskis.wktk.so/AozoraMincho/download.html 
+% https://stackoverflow.com/questions/55264642/how-to-force-win10-to-install-fonts-in-c-windows-fonts (install for all users)
+\setCJKmainfont[BoldFont=AozoraMincho-bold,AutoFakeSlant=0.15]{Aozora Mincho}
+
+\usepackage[english,japanese]{babel} % For Japanese date format
+\usepackage{csquotes}
+\usepackage{indentfirst} % For Japanese style indentation
+\setlength\parindent{11pt}
+```
+
 #### Display code sections in LaTeX
 
-```
+```tex
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -899,22 +1186,23 @@ I discovered this tool recently when I was asked to share a PDF of my private Gi
 
 It can be installed in Windows, macOS, Linux, ChromeOS, BSD, Docker, ... it's really portable
 
-Pandoc Install:  
-https://pandoc.org/installing.html
-
-
-Pandoc Manual:  
-https://pandoc.org/MANUAL.html
+Sources:
+- [Pandoc Install](https://pandoc.org/installing.html)
+- [Pandoc Manual](https://pandoc.org/MANUAL.html)
 
 
 Export to PDF syntax
-```
+```sh
+# @ shell(linux/mac_osx/wsl)
+
 pandoc test1.md -s -o test1.pdf
 ```
 
 Note that it uses LaTeX to convert to PDF, so UTF-8 languages (japanese, etc.) might return errors.
 
-```
+```sh
+# @ shell(linux/mac_osx/wsl)
+
 pandoc test1.md -s -o test1.pdf --pdf-engine=xelatex
 ```
 
@@ -922,17 +1210,17 @@ But it doesn't load the Font for Japanese... Also, the default margins are way t
 
 So, in the original markdown file preamble we need to add [Variables for LaTeX](https://pandoc.org/MANUAL.html#variables-for-latex):
 
-```
+```Markdown
 ---
 title: "Title"
 author: "Name"
 date: YYYY-MM-DD
-<!-- add the following -->
+# add the following 
 geometry: margin=1.5cm
 output: pdf_document
-<!-- CJKmainfont: IPAMincho #default font but no bold -->
-<!-- install this one for bold japanese: https://web.archive.org/web/20200321102301/http://blueskis.wktk.so/AozoraMincho/download.html -->
-<!-- https://stackoverflow.com/questions/55264642/how-to-force-win10-to-install-fonts-in-c-windows-fonts (install for all users) -->
+# CJKmainfont: IPAMincho #default font but no bold
+# install this one for bold japanese: https://web.archive.org/web/20200321102301/http://blueskis.wktk.so/AozoraMincho/download.html
+# https://stackoverflow.com/questions/55264642/how-to-force-win10-to-install-fonts-in-c-windows-fonts (install for all users)
 CJKmainfont: Aozora Mincho
 CJKoptions:
 - BoldFont=AozoraMincho-bold
@@ -956,221 +1244,61 @@ Renders as:
 $$x=3$$
 
 
-## Web development
-
-### Python FastAPI
-
-Under construction
-
-### Ruby, Bundler and Jekyll for static websites
-
-Sometimes it might be necessary to present results in HTML websites. I also make websites on my free time, and lots of researchers have their projects on a github pages website. For this, I like to use Jekyll in combination with github pages.
-
-For this, I like to use Jekyll, which needs Ruby and Bundler. 
-
-#### Install Ruby on Windows
-
-First lets install Ruby, on which Jekyll and Bundler will be later installed.
-
-- Reference:
-    - [Jekyll installation guide for windows](https://jekyllrb.com/docs/installation/windows/)
-
-Install Ruby+Devkit on Windows with [RubyInstaller](https://rubyinstaller.org/)
-
-- Don't forget to select the add Ruby related items to PATH option
-- Run the ridk install at the last stage of the installation wizard.
-- You'll be prompted to install MSYS2, I selected option 3.
-
-Open a new command prompt window from the start menu, so that changes to the PATH environment variable becomes effective. 
-`echo %PATH%` on cmd and `echo $PATH` on Git Bash should both have Ruby related paths now.
-
-
-You can do this on the Git Bash too, but the output will be delayed, so run on cmd.
-
-#### Install Ruby on MacOSX
-
-- Reference:
-    - [Jekyll installation guide for mac](https://jekyllrb.com/docs/installation/macos/)
-
-First lets install Ruby, on which Jekyll and Bundler will be later installed.
-
-```
-brew install ruby
-```
-
-Then, we have to add to the $PATH so that ruby gems are found:
-
-```
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zprofile
-echo 'export PATH="/usr/local/opt/ruby/bin:$PATH"' >> ~/.zprofile
-echo 'export PATH="~/.local/share/gem/ruby/X.X.X/bin:$PATH"' >> ~/.zprofile
-source ~/.zprofile
-```
-
-Where `X.X.X ` is the version you have installed.
-
-In my case it was:
-
-```
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zprofile
-echo 'export PATH="/usr/local/opt/ruby/bin:$PATH"' >> ~/.zprofile
-echo 'export PATH="~/.local/share/gem/ruby/3.0.0/bin:$PATH"' >> ~/.zprofile
-source ~/.zprofile
-```
-
-Check that we're indeed using the Homebrew version of ruby:
-
-```
-which ruby
-```
-Which should output this:
-```
-/usr/local/opt/ruby/bin/ruby
-```
-
-
-#### Install Ruby on Linux
-
-- Reference:
-    - [Jekyll installation guide for Ubuntu](https://jekyllrb.com/docs/installation/ubuntu/)
-
-First lets install Ruby, on which Jekyll and Bundler will be later installed.
-
-```
-sudo apt-get install ruby-full build-essential zlib1g-dev
-```
-
-Then, we have to add to the $PATH so that ruby gems are found:
-
-```
-echo '# Install Ruby Gems to ~/gems' >> ~/.bash_profile
-echo 'export GEM_HOME="$HOME/gems"' >> ~/.bash_profile
-echo 'export PATH="$HOME/gems/bin:$PATH"' >> ~/.bash_profile
-source ~/.bash_profile
-```
-
-#### Install Jekyll and Bundler
-
-Install Jekyll and Bundler:
-
-```
-gem install bundler jekyll jekyll-sitemap
-```
-
-For MacOSX, it is necessary to install at the user level, if I recall correctly...
-
-```
-gem install --user-install bundler jekyll jekyll-sitemap
-```
-
-Check if installed properly `jekyll -v` on cmd or git bash.
-
-Now it's installed! I'll be using this for local websites, but we're going to follow a tutorial on how to make Jekyll Github Pages, so even though we're not using GitHub, give this a read.
-
-https://docs.github.com/en/pages/setting-up-a-github-pages-site-with-jekyll
-
-Make a new repository for your website on local git.
-
-Now, once you have your webiste repository and you're ready to test the jekyll serve, do the following:
-
-```
-cd (your_repository_here)
-bundle init
-bundle add jekyll
-bundle add jekyll-sitemap
-bundle add webrick
-```
-
-And then all that's left to do is to serve the website with jekyll!
-Also for the sitemaps make sure to check this tutorial:
-
-https://github.com/jekyll/jekyll-sitemap
-
-And add this to your `_config.yml`
-```
-url: "https://example.com" # the base hostname & protocol for your site
-plugins:
-  - jekyll-sitemap
-```
-
-```
-bundle exec jekyll serve
-```
-
-If you get an error like:
-```
-Could not find webrick-1.7.0 in any of the sources
-Run `bundle install` to install missing gems.
-```
-
-Do as it says and just run:
-```
-bundle install
-```
-
-Now you can work on the website and look at how it changes on screen.
-
-By the way, if you are hosting on GitHub Pages and have a custom domain, you need to add these to the DNS
-
-```
-Type    Name    Points to               TTL
-a       @       185.199.108.153         600 seconds
-a       @       185.199.109.153         600 seconds
-a       @       185.199.110.153         600 seconds
-a       @       185.199.111.153         600 seconds
-cname   www     your-username.github.io 600 seconds   
-```
-
 ## Python suggested libraries
 
-This is my generic fresh start install so I can work. Usually I'd install all of them in general, but recently I only install the necessary libraries under venv. There's more libraries with complicated installations in other repositories of mine, and you might not wanna run this particular piece of code without checking what I'm doing first. For example, you might have a specific version of Tensorflow that you want, or some of these you won't use. But I'll leave it here as reference.
+!!!!!!!!!!!!
+This section needs heavy editing, after years, some of the libraries are not recommended anymore.
+!!!!!!!!!!!!
 
-<a id="basic-tasks"></a>
+<!-- This is my generic fresh start install so I can work. Usually I'd install all of them in general, but recently I only install the necessary libraries under venv. There's more libraries with complicated installations in other repositories of mine, and you might not wanna run this particular piece of code without checking what I'm doing first. For example, you might have a specific version of Tensorflow that you want, or some of these you won't use. But I'll leave it here as reference.
+
+
 #### Basic tasks:
 
 ```
-pip install numpy scipy jupyter statsmodels \
+pip install numpy scipy statsmodels \
 pandas pathlib tqdm retry openpyxl
 ```
 
-<a id="plotting"></a>
+
 #### Plotting:
 ```
 pip install matplotlib adjustText plotly kaleido
 ```
 
-<a id="basic-data-science-and-machine-learning"></a>
+
 #### Basic data science and machine learning:
 ```
 pip install sklearn sympy pyclustering
 ```
 
-<a id="data-mining--text-mining--crawling--scraping-websites"></a>
+
 #### Data mining / text mining / crawling / scraping websites:
 ```
 pip install beautifulsoup4 requests selenium
 ```
 
-<a id="natural-language-processing-nlp"></a>
+
 #### Natural language processing (NLP):
 ```
 pip install gensim nltk langdetect
 ```
 
-For Japanese NLP tools see:
-https://github.com/elisa-aleman/MeCab-python
+For Japanese NLP tools see my example repository: 
+- [MeCab-python](https://github.com/elisa-aleman/MeCab-python)
 
-For Chinese NLP tools see:
-https://github.com/elisa-aleman/StanfordCoreNLP_Chinese
+For Chinese NLP tools and installation guides I developed see: 
+- [StanfordCoreNLP_Chinese](https://github.com/elisa-aleman/StanfordCoreNLP_Chinese)
 
-<a id="neural-network-and-machine-learning"></a>
+Both are pretty old repositories that I haven't looked that in forever, though.
+
 #### Neural network and machine learning:
 ```
 pip install tensorflow tflearn keras \
 torch torchaudio torchvision \
 optuna
 ```
-<a id="xgboost"></a>
+
 #### XGBoost
 
 To Install with CPU:
@@ -1190,7 +1318,7 @@ cd ../python-package
 python setup.py install
 ```
 
-<a id="lightgbm"></a>
+
 #### LightGBM
 
 To Install with CPU:
@@ -1213,7 +1341,7 @@ Install with CUDA GPU integration:
 pip install lightgbm --install-option=--gpu --install-option="--opencl-include-dir=/usr/local/cuda/include/" --install-option="--opencl-library=/usr/local/cuda/lib64/libOpenCL.so"
 ```
 
-<a id="minepy--maximal-information-coefficient"></a>
+
 #### MINEPY / Maximal Information Coefficient
 
 For Minepy / Maximal Information Coefficient, we need the Visual Studio C++ Build Tools as a dependency, so install it first:<br>
@@ -1223,7 +1351,7 @@ https://visualstudio.microsoft.com/visual-cpp-build-tools/
 pip install minepy
 ```
 
-<a id="computer-vision-opencv"></a>
+
 #### Computer Vision (OpenCV)
 
 **Note to self: re-write with poetry project use instead of venv**
@@ -1235,7 +1363,7 @@ python -m pip install -U opencv-python opencv-contrib-python
 ```
 
 
-<a id="install-opencv-with-ffmpeg"></a>
+
 ##### Install OpenCV with ffmpeg
 
 Install dependencies:
@@ -1301,25 +1429,26 @@ ldconfig
 ```
 
 
-
+ -->
 
 ## Shell Scripting for convenience
 
 When it comes down to it, specially when working with LaTeX or git, you find yourself making the same commands over and over again. That takes time and frustration, so I find that making scripts from time to time saves me a lot of time in the future.
 
 
-<a id="basic-flag-setup-with-getopts"></a>
+
 ### Basic flag setup with getopts
 
 Once in a while those scripts will need some input to be more useful in as many cases as possible instead of a one time thing.
 
 Looking for how to do this I ran across [a simple StackOverflow question](https://stackoverflow.com/questions/14447406/bash-shell-script-check-for-a-flag-and-grab-its-value), which led me to the `getopts` package and its tutorial:
 
-[Getopts manual](https://archive.ph/TRzn4)
+Source:
+- [getopts manual](https://archive.ph/TRzn4)
 
 This is a working example:
 
-```
+```sh
 while getopts ":a:" opt; do
   case $opt in
     a)
@@ -1338,13 +1467,13 @@ done
 
 ```
 
-<a id="argparse-bash-by-nhoffman"></a>
+
 ### Argparse-bash by nhoffman
 
-Now sometimes you'll want to have fancy arguments with both a shortcut name (-) and a long name (--), for example `-a` and `--doall` both pointing to the same command. In that case I recommend using nhoffman's implementation of Python's `argparse` in bash:
+Now sometimes you'll want to have fancy arguments with both a shortcut name `-` and a long name `--`, for example `-a` and `--doall` both pointing to the same command. In that case I recommend using nhoffman's implementation of Python's `argparse` in bash:
 
-[argparse.bash by nhoffman on GitHub](https://github.com/nhoffman/argparse-bash)
-
+Source:
+- [argparse.bash by nhoffman on GitHub](https://github.com/nhoffman/argparse-bash)
 
 
 ## Accessibility Tools
@@ -1360,33 +1489,39 @@ https://paletton.com
 
 There was a new tool developed called "Bionic Reading", which bolds the beginnings of words so that our eyes glide over them more easily, basically making a tool for speed reading without having to train specifically for that. Lots of neurodivergent people such as myself (I have ADHD and am autistic), have a hard time following long texts or focusing when there is too much information at the same time (say, with very small line spacing). This new tool has been praised by the ND (neurodivergent) community, since making it available for businesses or companies to use would mean more accessibility in everyday services...  or at least it was until they decided to charge an OUTRAGEOUS amount of money to implement it, making it obviously not attractive for companies to implement and therefore ruining it for everyone.
 
-That is why someone decided to make "Not Bionic Reading" which is, legally speaking, not the same thing as Bionic Reading and therefore can be made available for everyone as Open Source.
+That is why someone decided to make "[Not Bionic Reading](https://not-br.neocities.org/)" which is, legally speaking, not the same thing as Bionic Reading and therefore can be made available for everyone as Open Source.
 
-Here's the usable link:
-https://not-br.neocities.org/
+Source:
+- [Not Bionic Reading](https://not-br.neocities.org/)
+- [not-br on GitHub](https://github.com/axoletl/not-br)
 
 Have fun reading!
 
+### Dark Reader
+
+[Dark Reader](https://darkreader.org/) is an extension for your browser that 
 
 ### Reading white PDFs
 
 
 #### Firefox
 
-https://pncnmnp.github.io/blogs/firefox-dark-mode.html
+References:
+- [Dark mode for Firefox's built-in PDF viewer](https://pncnmnp.github.io/blogs/firefox-dark-mode.html)
 
 > After hunting on the web for about 30 minutes, I found this thread on Bugzilla. It turns out starting with Firefox 60, extensions are no longer allowed to interact with the native pdf viewer. Determined, I decided to locally modify the CSS rendered by Firefox's PDF viewer. The steps for the same are:
 >
 > - Open Firefox and press Alt to show the top menu, then click on Help → Troubleshooting Information
 > - Click the Open Directory button beside the Profile Directory entry
 > - Create a folder named chrome in the directory that opens
-> - In the chrome folder, create a CSS file with the name userContent.css
-> - Open the userContent.css file and insert -
+> - In the chrome folder, create a CSS file with the name `userContent.css`
+> - Open the `userContent.css` file and insert -
 
-```
-#viewerContainer > #viewer > .page > .canvasWrapper > canvas {
+```css
+#viewerContainer > #viewer .page > .canvasWrapper > canvas {
     filter: grayscale(100%);
     filter: invert(100%);
+    background-color: #000 !important;
 }
 ```
 
@@ -1397,9 +1532,7 @@ https://pncnmnp.github.io/blogs/firefox-dark-mode.html
 
 #### Microsoft Edge
 
-If you ever need to read a PDF on the Microsoft Edge browser, you can create a snippet to execute on the Dev Console, as per this post.
-
-https://www.reddit.com/r/edge/comments/nhnflv/comment/hgejdwz/?utm_source=share&utm_medium=web2x&context=3
+If you ever need to read a PDF on the Microsoft Edge browser, you can create a snippet to execute on the Dev Console, as per [this post](https://www.reddit.com/r/edge/comments/nhnflv/comment/hgejdwz/?utm_source=share&utm_medium=web2x&context=3).
 
 > So, I've wanted this feature pretty badly as well and I've found a workaround which doesn't involve inverting the whole OS but still takes some extra steps:
 >
@@ -1411,7 +1544,7 @@ https://www.reddit.com/r/edge/comments/nhnflv/comment/hgejdwz/?utm_source=share&
 > 6. Profit!
 
 
-```
+```js
 let backgroundColor = PDFViewer.EDGE_PDFVIEWER_BACKGROUND_COLOR_LIGHT;
 viewer.plugin_.setAttribute('background-color', backgroundColor);
 viewer.pluginController_.postMessage({
@@ -1442,10 +1575,7 @@ document.getElementById('layout-container').style.filter = 'invert()';
 
 #### Google Chrome
 
-I found a solution in this post:
-
-https://superuser.com/a/1527417
-
+I found a solution in [this post](https://superuser.com/a/1527417).
 
 > The following snippet adds a div overlay to any browser tab currently displaying a PDF document.
 > 1. Open up your browser's Dev tools then browser console.

@@ -1,4 +1,12 @@
-# Initial Data Science setup for Windows
+# Windows setup environment for development
+
+TODO:
+- [ ] Re-check old narrative
+- [ ] Add comments about proxy?
+- [ ] Check all syntax highlights and location comments
+- [ ] Add style guide for location comments
+- [ ] Wrap all links
+- [ ] propagate relevant parts of suggested tools guide to OS specific guides with links to this main document
 
 I initially used to work on python and Data Science using MacOSX or Ubuntu, so changing to Windows was a confusing experience. Because of this I wrote a guide of everything I did for the initial setup of my computer to start programming.
 

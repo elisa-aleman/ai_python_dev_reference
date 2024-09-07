@@ -1,8 +1,67 @@
 # Web development notes
 
+TODO:
+- [ ] Re-check old narrative
+- [ ] Check all syntax highlights and location comments
+- [ ] Add style guide for location comments
+- [ ] Wrap all links
+- [ ] Write about Python FastAPI to replace old Flask docs
+
+
 ## Python FastAPI
 
 Under construction
+
+## nodenv for Node.js tools
+
+Sources:
+- [anyenv: nodenv](https://github.com/anyenv/anyenv)
+- [nodenv](https://github.com/nodenv/nodenv)
+
+[nodenv](https://github.com/nodenv/nodenv) allows you to install isolated Node.js environments.
+
+I mainly don't do front end development or use Node.js at all for my personal projects, but nodenv allows me to install other JS based tools I've found useful, like [Mermaid](https://mermaid.js.org/).
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+anyenv install nodenv
+exec $SHELL -l
+```
+
+Or, if you didn't install `anyenv`, follow the [github based installation](https://github.com/nodenv/nodenv?tab=readme-ov-file#basic-github-checkout).
+
+Now install the latest version (I'm not knowledgeable enough about compatibility issues yet to determine if older versions are better)
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+nodenv install -l
+```
+
+At the time of writing (2024-09-07):
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+nodenv install 22.8.0
+nodenv global 22.8.0
+```
+
+Test if the `npm` commands work:
+```sh
+# @ shell(linux/mac_osx/wsl)
+npm -h
+
+```
+
+## Mermaid CLI
+
+There's a Node.js command line tool called [`mermaid-cli`](https://github.com/mermaid-js/mermaid-cli) which is necessary for the Mermaid Sublime plugin. However, I ran into dependency issues.
+
+```
+npm warn deprecated puppeteer@19.11.1: < 22.8.2 is no longer supported
+```
+
+There's already a [pull request fixing this](https://github.com/mermaid-js/mermaid-cli/pull/739), but hasn't been merged at the time of writing this (2024-09-07)
 
 ## Ruby, Bundler and Jekyll for static websites
 

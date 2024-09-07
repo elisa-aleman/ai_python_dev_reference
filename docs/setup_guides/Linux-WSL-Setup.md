@@ -1,4 +1,15 @@
-# Linux (or WSL) Python setup environment for Machine learning Laboratory
+
+# Linux (or WSL) setup environment for development
+
+This guide is under construction
+
+TODO:
+- [ ] Re-check old narrative
+- [ ] Add comments about proxy?
+- [ ] Check all syntax highlights and location comments
+- [ ] Add style guide for location comments
+- [ ] Wrap all links
+- [ ] propagate relevant parts of suggested tools guide to OS specific guides with links to this main document
 
 This is how I set up a fresh linux installation to start working in machine learning and programming. 
 
@@ -66,7 +77,9 @@ https://help.ubuntu.com/stable/ubuntu-help/nautilus-views.html.en
 
 In order for most anything else to install properly, we need these first:
 
-```
+```sh
+# @ shell(linux)
+
 sudo apt-get update
 sudo apt-get install \
     build-essential \

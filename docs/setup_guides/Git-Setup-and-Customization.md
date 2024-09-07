@@ -1,5 +1,11 @@
 # Git setup guide
 
+TODO:
+- [ ] Update "Manage multiple accounts" section with newer knowledge
+- [ ] Check all syntax highlights and location comments
+- [ ] Add style guide for location comments
+- [ ] Wrap all links
+
 First install git according to your OS. 
 
 ## Install Git
@@ -20,7 +26,9 @@ https://git-scm.com/download/win
 
 Mac already has git installed (that's how we installed homebrew too), but we can update it and manage it with homebrew.
 
-```
+```sh
+# @ shell(mac_osx)
+
 brew install git
 ```
 
@@ -28,19 +36,20 @@ brew install git
 
 Linux already has git installed, but we can update it and manage it with apt-get.
 
-```
+```sh
+# @ shell(linux/wsl)
+
 sudo apt-get update
 sudo apt-get install git
 ```
-
-
-
 
 ## Initial setup
 
 Then setup the configuration. Make an account at [GitHub](https://github.com) to get a username and email associated with Git. Type the settings on the terminal. My settings are like this:
 
-```
+```sh
+# @ shell(linux/mac_osx/wsl)
+
 git config --global http.proxy http://{PROXY_HOST}:{PORT}
 git config --global user.name {YOUR_USERNAME}
 git config --global user.email {YOUR_EMAIL}
@@ -54,7 +63,7 @@ git config --global pull.ff only
 
 This should make a file `~/.gitconfig` with the following text
 
-```
+```yaml
 # @ ~/.gitconfig
 
 [http]
@@ -81,17 +90,28 @@ That last one, `git adog` is very useful as I explain in [Check your branches in
 
 Next, Git on Windows has a limitation on filenames compared to Linux or MacOSX. Here's an explanation found [here](https://stackoverflow.com/a/22575737)
 
-> Git has a limit of 4096 characters for a filename, except on Windows when Git is compiled with msys. It uses an older version of the Windows API and there's a limit of 260 characters for a filename. <br><br>
-So as far as I understand this, it's a limitation of msys and not of Git. You can read the details here: https://github.com/msysgit/git/pull/110 <br><br>
-You can circumvent this by using another Git client on Windows or set core.longpaths to true as explained in other answers.<br><br> 
-`git config --system core.longpaths true` <br><br>
-Git is build as a combination of scripts and compiled code. With the above change some of the scripts might fail. That's the reason for core.longpaths not to be enabled by default. <br><br> 
-The windows documentation at https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=cmd#enable-long-paths-in-windows-10-version-1607-and-later has some more information: <br><br>
->>   Starting in Windows 10, version 1607, MAX_PATH limitations have been removed from common Win32 file and directory functions. However, you must opt-in to the new behavior. <br><br> A registry key allows you to enable or disable the new long path behavior. To enable long path behavior set the registry key at HKLM\SYSTEM\CurrentControlSet\Control\FileSystem LongPathsEnabled (Type: REG_DWORD)
+> Git has a limit of 4096 characters for a filename, except on Windows when Git is compiled with msys. It uses an older version of the Windows API and there's a limit of 260 characters for a filename. 
+
+So as far as I understand this, it's a limitation of msys and not of Git. You can read the details [here](https://github.com/msysgit/git/pull/110). 
+
+You can circumvent this by using another Git client on Windows or set `core.longpaths` to true as explained in other answers.
+
+`git config --system core.longpaths true` 
+
+Git is build as a combination of scripts and compiled code. With the above change some of the scripts might fail. That's the reason for core.longpaths not to be enabled by default. 
+
+
+The [windows documentation on longpaths](https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=cmd#enable-long-paths-in-windows-10-version-1607-and-later) has some more information: 
+
+>>   Starting in Windows 10, version 1607, MAX_PATH limitations have been removed from common Win32 file and directory functions. However, you must opt-in to the new behavior. 
+
+A registry key allows you to enable or disable the new long path behavior. To enable long path behavior set the registry key at `HKLM\SYSTEM\CurrentControlSet\Control\FileSystem LongPathsEnabled (Type: REG_DWORD)`
 
 Since we don't want to mess up the system settings, let's set it up with global config files for now:
 
-```
+```sh
+# @ git_bash
+
 git config --global core.longpaths true
 ```
 
@@ -103,7 +123,9 @@ git config --global core.longpaths true
 This makes your history tree pretty and easy to understand inside of the terminal.
 I found this in https://stackoverflow.com/a/35075021
 
-```
+```sh
+# @ shell(linux/mac_osx/wsl)
+
 git log --all --decorate --oneline --graph
 ```
 
@@ -112,30 +134,39 @@ Not everyone would be doing a git log all the time, but when you need it just re
 
 Actually, let's set an alias:
 
-```
+```sh
+# @ shell(linux/mac_osx/wsl)
+
 git config --global alias.adog "log --all --decorate --oneline --graph"
 ```
 
 This adds the following to the .gitconfig file:
 
-```
+```yaml
 [alias]
         adog = log --all --decorate --oneline --graph
 ```
 
 And you run it like:
 
-```
+```sh
+# @ shell(linux/mac_osx/wsl)
+
 git adog
 ```
 
-<a id="push-with-tags-multi-line-git-alias"></a>
+
 ### Push with tags: multi-line git alias
 
 To add a multi-line alias, for example, push and then push the tags on one single command, use `'!git ... && git ...'` as a format:
 
 Push with tags:
-`git config --global alias.pusht '!git push && git push --tags'`
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+git config --global alias.pusht '!git push && git push --tags'
+```
 
 
 ## Manage multiple GitHub or GitLab accounts
