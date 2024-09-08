@@ -54,34 +54,6 @@ Shift+9      ->   (
 
 As I pretty much never use the right Alt key for anything I can't use the left one for, and I keep missing the parentheses because of the actual key cap being one number over.
 
-
-## Install Git Bash
-
-Download and Install from [The Git for Windows website](https://gitforwindows.org/)
-
-I used most of the suggestions on installation, except for a few exceptions. Here's the options I chose:
-
-- Check all the check-marks at the beginning to have right click menus for GitBash and shortcuts in the Windows pane.
-- Make sure to install GitLFS along with the installation.
-- Associate `.sh` and `.git` files with GitBash
-- Use **Nano** editor as default
-- Override the `master` branch to `main`
-- When prompted to the **Adjusting your PATH environment window** : choose **Use Git from the command line and also 3rd party software**
-- Use Bundled OpenSSH
-- Use OpenSSL
-- When choosing line-endings: **Checkout windows, commit Unix-style line endings**
-- Use MinTTY
-- Choose the default behavior of `git pull` as `fast-forward only`
-- Do not use Git credential manager (later I will add SSH configs)
-- Enable file system caching
-- Enable pseudo consoles
-
-Now click **Install** and wait for the installation to finish.
-
-Follow the [Git Setup and Customization](./Git-Setup-and-Customization.md) for more.
-
-What's also good about this setup is that it will add a Windows Terminal profile.
-
 ## Setup Windows Terminal + Git Bash + Cmder
 
 
@@ -122,6 +94,14 @@ This can be fixed in a few ways:
 2. Move all the contents of `.bash_profile` to `.profile`, then delete `.bash_profile` so that there's nothing stopping all the initial codes from running even in a login shell.
 
 3. Add `source ~/.profile` to the beginning of `.bash_profile` so that it is run regardless, and therefore also loads `.bashrc` if necessary. Personally I chose this one.
+
+However, the best option is to actually start the WSL software with an initial command that starts bash at startup.
+
+```cmd
+C:\Windows\system32\wsl.exe -d Ubuntu --exec bash -l
+```
+
+This way, there's no need to edit the profile files.
 
 ### Linux development guide
 
