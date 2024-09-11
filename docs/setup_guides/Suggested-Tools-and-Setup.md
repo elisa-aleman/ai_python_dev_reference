@@ -11,6 +11,31 @@ TODO:
 - [ ] Update all python package suggestions (pretty outdated)
 - [ ] Once guide is finished propagate relevant parts to OS specific guides with links to this main document
 - [ ] Add style guide for location comments
+- [ ] Add pyaudio stuff because it was complicated.
+- [ ] easydiff might be taking a long time at work because it connects to the git at the linux server instead of locally
+    - [ ] `{"git_disabled":true,}`
+- [ ] Windows Terminal SSH command
+    - [ ]  `C:/Program Files/Git/bin/bash.exe -i -l -c 'ssh USER@HOST'`
+- [ ] Opencv with poetry
+- [ ] Mermaid comments on git issues need copy markdown from live editor
+- [ ] mermaid class diagrams not available on wiki depending on github/gitlab version.
+- [ ] win terminal profile ssh
+
+```
+@ ~/.ssh/config 
+Host linux_server
+    HostName xxx.xx.x.xx
+    Port xxx
+    User xxxx
+    RequestTTY force
+    RemoteCommand cd your/path/here; bash -l
+
+```
+ 
+- [ ]  poetry docker gpu needs cuda11 (faster whisper uses cuda 11,  * actually not anymore* pytorch is compatible with cuda12)
+- [ ] 
+
+
 
 I'm an AI engineer with a PhD and years of experience developing in several languages, but mostly python (most of the AI runs on python and C++). Throughout the years I've accumulated experience using more and more convenient tools, solving issues I never imagined I would have. This guide is both for me and anyone reading this to save themselves some time when starting up either as a new beginner developer or an experienced one who just bought a new computer or did a clean install of their OS and needs to start all over again (happens more often than I'd like to admit).
 
@@ -466,18 +491,79 @@ And finally, when cloning a repository, you can use `poetry install` to easily i
 
 
 
-
-
-
-
-
 #### Docker + poetry
 
 
+- [ ] Poetry + Docker multiphase install (dockerfile tmp image to install poetry and then make a requirements.txt, then main image to install actual project)
+
+```
+ Having Poetry installed in the final image is just extra stuff you won't need. Instead, I prefer to use Poetry to generate a requirements file, then install those dependencies using standard pip.
+
+The Poetry community is still discussing best practices they can recommend for docker. Meanwhile, from folks providing examples in Poetry's GitHub issues, I pieced together a multi-stage build I like that goes like this:
+
+# Generate workable requirements.txt from Poetry dependencies 
+FROM​ python:3-slim as requirements 
+
+RUN​ apt-get install -y --no-install-recommends build-essential gcc 
+RUN​ python -m pip install --no-cache-dir --upgrade poetry 
+
+COPY​ pyproject.toml poetry.lock ./ 
+RUN​ poetry export -f requirements.txt --without-hashes -o /src/requirements.txt 
+
+#​ Final app image 
+FROM​ python:3-slim as webapp 
+
+#​ Switching to non-root user appuser 
+RUN​ adduser appuser 
+WORKDIR​ /home/appuser 
+USER​ appuser:appuser 
+
+#​ Install requirements 
+COPY​ --from=requirements /src/requirements.txt . 
+RUN​ pip install --no-cache-dir --user -r requirements.txt
+
+I highly recommend learning more about multi stage builds like this. Everything installed in the requirements layer is erased afterward, including all of Poetry's dependencies, leading to a smaller image size. And, you can run the program in the final image using simpler python commands, with all your requirements installed to the "system" python in the container.
+
+Edit: for those interested, Poetry discussion on Docker best practices can be found here: https://github.com/python-poetry/poetry/discussions/1879
+
+The source I found in that discussion that turned me on to generating the requirements file in its own stage is here: https://github.com/Docker-s-IMAGES/no-pypoetry/blob/master/Dockerfile
+
+```
+
+
+```
+
+docker build --no-cache -t poetry_python:3.11.7-bookworm - << EOF
+FROM python:3.1.1.7-bookworm
+RUN apt update && \
+    apt install -y pipx
+ENV PATH=“$PATH:/root/.local/bin”
+RUN pipx install poetry==1.7.1 && pipx inject poetry poetry-plugin-export
+CMD[“/bin/bash”]
+EOF
+
+docker run -itd --ipc=host -v ${PWD%/*}:/work --shm-size=4gb --gpus ‘“device=1”’ --name my_container python:3.11.7-bookworm bash
+
+docker exec -it -w /work/project my_container bash
+
+poetry new project-name
+cd project-name
+nano pyproject.toml
+poetry install
+
+exit
+
+touch test.txt
+docker exec -it -w /work/project my_container bash
+ls -l
+
+Check UID and GID
+
+chown -R UID:GID ./*
 
 
 
-
+```
 
 
 
