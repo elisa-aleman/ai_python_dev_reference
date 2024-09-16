@@ -4,36 +4,10 @@ This guide is under construction
 
 
 TODO:
-- [X] Write sections about terminals
 - [ ] Finish anyenv section
-- [ ] Add poetry usage section
-- [ ] Add docker specific Poetry section
-- [ ] Update all python package suggestions (pretty outdated)
-- [ ] Once guide is finished propagate relevant parts to OS specific guides with links to this main document
+- [ ] Update python libraries section
 - [ ] Add style guide for location comments
-- [ ] Add pyaudio stuff because it was complicated.
-- [ ] easydiff might be taking a long time at work because it connects to the git at the linux server instead of locally
-    - [ ] `{"git_disabled":true,}`
-- [ ] Windows Terminal SSH command
-    - [ ]  `C:/Program Files/Git/bin/bash.exe -i -l -c 'ssh USER@HOST'`
-- [ ] Opencv with poetry
-- [ ] Mermaid comments on git issues need copy markdown from live editor
-- [ ] mermaid class diagrams not available on wiki depending on github/gitlab version.
-- [ ] win terminal profile ssh
-
-```
-@ ~/.ssh/config 
-Host linux_server
-    HostName xxx.xx.x.xx
-    Port xxx
-    User xxxx
-    RequestTTY force
-    RemoteCommand cd your/path/here; bash -l
-
-```
- 
-- [ ]  poetry docker gpu needs cuda11 (faster whisper uses cuda 11,  * actually not anymore* pytorch is compatible with cuda12)
-- [ ] 
+- [ ] Once guide is finished propagate relevant parts to OS specific guides with links to this main document
 
 
 
@@ -133,6 +107,35 @@ This way, there's no need to edit the profile files.
 
 Also, do refer to my [Windows Setup guide: WSL section](./Windows-Setup.md#wsl-windows-subsystem-for-linux-installation-guide), since there are a few peculiarities in proxy environments.
 
+#### Windows Terminal + SSH server
+
+When developing, it will be common that the main work is all done over a Linux server with a GPU, and that the main Windows PC is just used for editing the files.
+
+To access the SSH server over a new profile, we can run the startup command like this:
+
+```cmd
+C:/Program Files/Git/bin/bash.exe -i -l -c 'ssh USER@HOST:PORT'
+```
+
+The host can also be added to the `.ssh/config` file:
+
+```
+@ ~/.ssh/config 
+Host linux_server
+    HostName xxx.xx.x.xx
+    Port xxx
+    User xxxx
+    RequestTTY force
+    RemoteCommand cd your/path/here; bash -l
+
+```
+
+Then, the command can be:
+
+```cmd
+C:/Program Files/Git/bin/bash.exe -i -l -c 'ssh USER@linux_server'
+```
+
 
 #### Windows Terminal themes
 
@@ -145,6 +148,19 @@ To implement a theme, all you have to do is copy the JSON code, then open Window
 [iTerm2](https://iterm2.com/) is my go to terminal emulator for MacOSX. It allows for customization, auto-complete, split panes, and many other features and it mimics well functions that Linux / Unix developers already know by heart.
 
 Here's [an extensive collection of iTerm2 color schemes](https://iterm2colorschemes.com/) as well, to make it pretty.
+
+As for the profiles, I find that I only ever needed to keep an `alias` for the SSH connection, and not a whole new terminal profile.
+
+To do that I would add the aliases to `~/.bash_aliases` file, which is sourced in `~/.bashrc`.
+
+For example:
+
+```sh
+# @ shell(mac_osx)
+alias ssh_server="ssh -p {PORT} {USERNAME}@{HOST_IP_ADDRESS}"
+```
+
+Which again, can be shortened with the appropriate entry on `~/.ssh/config`
 
 ### Linux
 
@@ -401,7 +417,7 @@ Let's also upgrade pip:
 pip install --upgrade pip
 ```
 
-### pipx
+### pipx for isolated installs of CLI python tools
 
 [pipx](https://github.com/pypa/pipx) is a tool that isolates the environment for command line applications that use python. This way, your other projects won't be contaminated with incompatible dependencies without you noticing. It also makes it extremely easy to manage, install and uninstall tools that are not technically to be used as an imported library in this way. You can think of it as the `apt-get install` equivalent for python tools.
 
@@ -432,7 +448,7 @@ sudo pipx ensurepath --global # optional to allow pipx actions with --global arg
 ```
 
 However, on Dockerfiles, `ensurepath` won't work, so we set the environment variables manually:
-```
+```Dockerfile
 # @ dockerfile
 USER root
 
@@ -450,15 +466,36 @@ It also allows for you to commit the final conclusion of those dependency checks
 
 I also use the `poetry-plugin-export` plugin to potentially output all of these dependency checks onto a less space heavy requirements.txt so as to use in deploy Docker images, which focus on saving as much space on the image as possible.
 
+- [ ] Add poetry usage section
+- [ ] Add docker specific Poetry section
+- [ ] poetry docker gpu needs cuda11 (faster whisper uses cuda 11,  * actually not anymore* pytorch is compatible with cuda12)
+- [ ] Update all python package suggestions (pretty outdated)
+    - [ ] Add pyaudio stuff because it was complicated.
+    - [ ] Opencv with poetry
+
 #### Install poetry with pipx
 
-- [ ] poetry / poetry plugin export
-        - [ ] https://python-poetry.org/docs/#installing-with-pipx
-        - [ ] `pipx install poetry && pipx inject poetry poetry-plugin-export`
+Poetry isolates every project dependency, but poetry cannot realistically handle its own dependencies in an isolated environment, so we isolate Poetry using `pipx`
 
+For more detail see [Installing poetry with pipx (poetry official website)](https://python-poetry.org/docs/#installing-with-pipx)
 
+I also like installing the export plugin to be able to use poetry for development, and the less resource heavy `requirements.txt` exported by poetry for deploy Docker images.
 
-Usage guide: https://python-poetry.org/
+Install poetry and the export plugin with pipx:
+
+```sh
+# @ shell
+
+pipx install poetry && pipx inject poetry poetry-plugin-export
+```
+
+#### Usage
+
+References:
+- Follow the [official Poetry documentation](https://python-poetry.org/docs/basic-usage/)
+- See [Poetry GitHub issues](https://github.com/python-poetry/poetry/issues) for undocumented problems
+- For complicated cases involving GPU or CUDA specific builds, or C++ extensions that are built from source, refer to my personal [Poetry C++ extensions guide](/docs/ai_development/Poetry-C++-extensions-guide.md)
+
 
 Making a new project can be as easy as:
 
@@ -481,97 +518,62 @@ This updates the dependency control files `poetry.toml`, `poetry.lock`, and `pyp
 
 And finally, when cloning a repository, you can use `poetry install` to easily install all the dependencies controlled by poetry in one command.
 
-#### Usage
-
-- Follow the [official Poetry documentation](https://python-poetry.org/docs/basic-usage/)
-- See [Poetry GitHub issues](https://github.com/python-poetry/poetry/issues) for undocumented problems
-- For complicated cases involving GPU or CUDA specific builds, or C++ extensions that are built from source, refer to my personal [Poetry C++ extensions guide](/docs/ai_development/Poetry-C++-extensions-guide.md)
-
-
-
-
 
 #### Docker + poetry
 
-
-- [ ] Poetry + Docker multiphase install (dockerfile tmp image to install poetry and then make a requirements.txt, then main image to install actual project)
-
-```
- Having Poetry installed in the final image is just extra stuff you won't need. Instead, I prefer to use Poetry to generate a requirements file, then install those dependencies using standard pip.
-
-The Poetry community is still discussing best practices they can recommend for docker. Meanwhile, from folks providing examples in Poetry's GitHub issues, I pieced together a multi-stage build I like that goes like this:
-
-# Generate workable requirements.txt from Poetry dependencies 
-FROM​ python:3-slim as requirements 
-
-RUN​ apt-get install -y --no-install-recommends build-essential gcc 
-RUN​ python -m pip install --no-cache-dir --upgrade poetry 
-
-COPY​ pyproject.toml poetry.lock ./ 
-RUN​ poetry export -f requirements.txt --without-hashes -o /src/requirements.txt 
-
-#​ Final app image 
-FROM​ python:3-slim as webapp 
-
-#​ Switching to non-root user appuser 
-RUN​ adduser appuser 
-WORKDIR​ /home/appuser 
-USER​ appuser:appuser 
-
-#​ Install requirements 
-COPY​ --from=requirements /src/requirements.txt . 
-RUN​ pip install --no-cache-dir --user -r requirements.txt
-
-I highly recommend learning more about multi stage builds like this. Everything installed in the requirements layer is erased afterward, including all of Poetry's dependencies, leading to a smaller image size. And, you can run the program in the final image using simpler python commands, with all your requirements installed to the "system" python in the container.
-
-Edit: for those interested, Poetry discussion on Docker best practices can be found here: https://github.com/python-poetry/poetry/discussions/1879
-
-The source I found in that discussion that turned me on to generating the requirements file in its own stage is here: https://github.com/Docker-s-IMAGES/no-pypoetry/blob/master/Dockerfile
-
-```
+References:
+- [Poetry discussion on Docker best practices](https://github.com/python-poetry/poetry/discussions/1879)
 
 
-```
+Building poetry projects inside Docker images is incredibly useful, but also very heavy in resources.
 
-docker build --no-cache -t poetry_python:3.11.7-bookworm - << EOF
-FROM python:3.1.1.7-bookworm
-RUN apt update && \
-    apt install -y pipx
-ENV PATH=“$PATH:/root/.local/bin”
+That's why I prefer to have two images: a development image, and a deploy image.
+
+The development image can be as heavy as needed, but the deploy image should be lightweight for ease of installing and resource efficiency for the users.
+
+For this, I recommend a multi stage Dockerfile, where the first images build the poetry environment, and then use the `poetry-plugin-export` plugin to obtain a `requirements.txt` file with all our specifications, which we can then use on the final stage of the Dockerfile.
+
+```Dockerfile
+# Generate workable requirements.txt from Poetry dependencies 
+FROM python:3-slim as requirements 
+
+RUN apt-get install -y --no-install-recommends build-essential gcc
+RUN pip install pipx
+ENV PATH="$PATH:/root/.local/bin"
 RUN pipx install poetry==1.7.1 && pipx inject poetry poetry-plugin-export
-CMD[“/bin/bash”]
-EOF
 
-docker run -itd --ipc=host -v ${PWD%/*}:/work --shm-size=4gb --gpus ‘“device=1”’ --name my_container python:3.11.7-bookworm bash
+COPY pyproject.toml poetry.lock ./ 
+RUN poetry export -f requirements.txt --without-hashes -o /src/requirements.txt 
 
-docker exec -it -w /work/project my_container bash
+# Final app image 
+FROM python:3-slim as webapp 
 
-poetry new project-name
-cd project-name
-nano pyproject.toml
-poetry install
+# Switching to non-root user appuser 
+RUN adduser appuser 
+WORKDIR /home/appuser 
+USER appuser:appuser 
 
-exit
-
-touch test.txt
-docker exec -it -w /work/project my_container bash
-ls -l
-
-Check UID and GID
-
-chown -R UID:GID ./*
-
-
-
+# Install requirements 
+COPY --from=requirements /src/requirements.txt . 
+RUN pip install --no-cache-dir --user -r requirements.txt
 ```
 
+For specific examples where I used CUDA compatible images, see my [CUDA python dockerfiles document](../ai_development/CUDA-python-dockerfiles.md)
 
 
+### toml-cli for automated edits of the pyproject.toml
 
-### toml-cli
+Ever since [PEP 518](https://peps.python.org/pep-0518/), accompanied by [PEP 517](https://peps.python.org/pep-0517/), packages are moving from the outdated (and frustratingly varied in behavior) `setup.py` installation to a more standardized installation details format called `pyproject.toml`
 
+Some package management tools like Poetry described above, can handle most of the file automatically and not all of it needs to be edited manually.
 
-- [ ] toml-cli
+However, some details remain to be automated with `poetry ` commands. 
+
+This is trivial in a local environment where we can open a file and edit it directly, but for automatic poetry environment building in Dockerfiles, for example, I try to automate these edits in a way that doesn't imply me having to remember which lines to edit.
+
+For those cases I like using [toml-cli](https://github.com/gnprice/toml-cli), which although not complete, has allowed me to build C dependency projects using poetry inside Docker images.
+
+Like other python-based CLIs, we should install using pipx:
 
 ```sh
 # @ shell(linux/mac_osx/wsl)
@@ -629,7 +631,9 @@ Then here's some cool packages to try:
 - [ConvertToUTF8](https://packagecontrol.io/packages/ConvertToUTF8)
 - [Dockerfile Syntax Highlighting](https://packagecontrol.io/packages/Dockerfile%20Syntax%20Highlighting)
 - [EasyDiff](https://packagecontrol.io/packages/EasyDiff)
-    - Note: this is extremely useful for development memo taking, but it can be a bit process heavy
+    - This is extremely useful for development memo taking
+    - However, if accessing the repository over ssh it can take a long time
+        - Disable the git checks with the setting: `{"git_disabled":true,}`
 - [Fold Python](https://packagecontrol.io/packages/Fold%20Python)
 - [IncrementSelection](https://packagecontrol.io/packages/Increment%20Selection)
     - When selecting several instances of the same number, increases by 1 each selection. 
@@ -826,7 +830,7 @@ So in summary:
 - Better visualization of the commit history
 - Easy diff view
 - Allows you to craft better commit messages
-- 
+
 
 ## Documents and Planning
 
@@ -866,7 +870,7 @@ There's tons of options for different diagrams. My favorite are:
 
 If you would rather see your work as you write it, there is the `mermaid-cli` and the [Mermaid Sublime Text Plugin](https://packagecontrol.io/packages/Mermaid), ...
 
-but I would rather just use the [Mermaid Live Editor](https://mermaid.live) since it provides me with the option to get example graphs, export graphs, and most importantly, generate copy-paste links for incompatible graph types.
+But I would rather just use the [Mermaid Live Editor](https://mermaid.live) since it provides me with the option to get example graphs, export graphs, and most importantly, generate copy-paste links for incompatible graph types.
 
 As I said before, not all the types of diagrams are executed in GitHub or GitLab, but the links work regardless if you paste it in a document, inside an issue, in a comment on GitHub on an Issue discussion, or even in some chats that execute markdown such as Slack or Typetalk.
 

@@ -54,15 +54,136 @@ Shift+9      ->   (
 
 As I pretty much never use the right Alt key for anything I can't use the left one for, and I keep missing the parentheses because of the actual key cap being one number over.
 
-## Setup Windows Terminal + Git Bash + Cmder
+## Terminal
+
+When developing, most of your time will be spent on either your text editor / IDE, or your terminal executing code. It is therefore important to choose a good one that integrates well into your workflow.
+
+Personally, when I started development on Ubuntu about 15 years ago, I wasn't too aware of this and the default gnome terminal was enough for me, although I did customize it a little. Then, when I moved over to MacOSX, my goal was to make my development environment as close to Ubuntu as possible. It was then that I started finding better options since the default terminal in MacOSX had zero customization and the color theme was awful on my eyes. Once finding better options, I found myself using features that I never used in Linux. Finally, when I moved to Windows because of my job requirements and also at home, for gaming, I found the OS to be truly disgusting, and the native development tools to be absolutely horrid. However, most of that stopped mattering when I found [WSL (Windows Subsystem for Linux)](https://ubuntu.com/desktop/wsl), I could run all my commands within a contained Linux environment, and all that I had to do on the Windows side was have my editor open (which is cross-platform). Then, on my free time, I could game without issues or partitioning memory drives, etc. (Although Windows 11 is frustrating enough that this might change).
+
+I quickly realized that I needed a good Terminal setup to approximate the workflow I had on MacOSX.
+
+Here are my recommendations:
+
+### Windows Terminal with Cmder, Git Bash, and WSL profiles
+
+It comes pre-installed, but compared to the pre-installed MacOSX terminal, it pretty much has all the functions that you need for customizing it to your taste, and the capability to run behind the scenes with better software than it initially has (looking at you, PowerShell). It also is not [Electron](https://www.electronjs.org/apps) based, which makes it **lightweight and fast** in comparison to other bloated options based in Electron. Don't use Electron for things where speed is paramount, please.
+
+I will split this in three sections:
+
+1) [Cmder](https://cmder.app/): Having an actually usable command prompt for Windows commands combined with a few essential sh commands.
+2) [Git Bash](https://gitforwindows.org/): Having a local (still technically within windows OS) bash shell for every other command you need.
+3) [WSL](https://www.groovypost.com/howto/install-windows-subsystem-for-linux-in-windows-11/): Access the Windows Subsystem for Linux within the Windows Terminal correctly
+
+#### Windows Terminal + Cmder
+
+[Cmder](https://cmder.app/) is a powerful combination of `cmd`, Clink, ConEmu and Git Bash that actually makes working with Windows commands bearable. However, I prefer to use the Windows Terminal as an interface. We can combine both by assigning a new profile to Windows Terminal pointing to the installed Cmder.
+
+[Here's a pretty thorough guide for that](https://medium.com/talpor/windows-terminal-cmder-%EF%B8%8F-573e6890d143)
+
+Besides the manual starting directory `D:\git\` I personalized, the guide is pretty complete.
+
+#### Windows Terminal + Git Bash
+
+Download and Install from [The Git for Windows website](https://gitforwindows.org/)
+
+I used most of the suggestions on installation, except for a few exceptions. Here's the options I chose:
+
+- Check all the check-marks at the beginning to have right click menus for GitBash and shortcuts in the Windows pane.
+- Make sure to install GitLFS along with the installation.
+- Associate `.sh` and `.git` files with GitBash
+- Use **Nano** editor as default
+- Override the `master` branch to `main`
+- When prompted to the **Adjusting your PATH environment window** : choose **Use Git from the command line and also 3rd party software**
+- Use Bundled OpenSSH
+- Use OpenSSL
+- When choosing line-endings: **Checkout windows, commit Unix-style line endings**
+- Use MinTTY
+- Choose the default behavior of `git pull` as `fast-forward only`
+- Do not use Git credential manager (later I will add SSH configs)
+- Enable file system caching
+- Enable pseudo consoles
+
+Now click **Install** and wait for the installation to finish.
+
+Follow the [Git Setup and Customization](./Git-Setup-and-Customization.md) for more.
+
+What's also good about this setup is that it will add a Windows Terminal profile.
+
+Then, I setup my starting directory `D:\git\`
+
+#### Windows Terminal + WSL
+
+Reference:
+- [How to install Windows Subsystem for Linux in Windows 11](https://www.groovypost.com/howto/install-windows-subsystem-for-linux-in-windows-11/)
 
 
-- [ ] Windows Terminal + Cmder
-    - [ ] https://medium.com/talpor/windows-terminal-cmder-%EF%B8%8F-573e6890d143 
-    - https://windowsterminalthemes.dev/
-    - Starting directory can be /mnt/d/...
-    - Make sure it's the `C:\Windows\system32\wsl.exe -d Ubuntu` and not the `ubuntu.exe` profile.
-    - `C:\Windows\system32\wsl.exe -d Ubuntu --exec bash -l` to start in bash instead of sh]
+1. Open the cmd with administrator privileges
+2. `wsl --install`
+3. Restart computer
+4. Make username under new Linux terminal
+
+Then, setup a new profile for WSL on Windows Terminal:
+
+1) Settings
+2) Add a new profile
+3) Name: `Ubuntu`
+4) Command line `C:\Windows\system32\wsl.exe -d Ubuntu --exec bash -l`
+5) Starting directory: `/mnt/d/git/`
+6) Icon: `https://assets.ubuntu.com/v1/49a1a858-favicon-32x32.png`
+
+And it should work!
+
+So, there's a few points to clarify:
+
+- Paths in WSL referring to the Windows disks can be found under `/mnt/` as mounted volumes.
+- Make sure it's the `C:\Windows\system32\wsl.exe -d Ubuntu` and not the `ubuntu.exe`, because they will behave differently under Windows Terminal
+- The original command `C:\Windows\system32\wsl.exe -d Ubuntu` does not open an additional bash, [leaving you in a login shell instead of an interactive shell](./Windows-Setup.md#wsl-about-profile-and-bash_profile). However, we can change the initial command that starts bash at startup to get the interactive shell automatically.
+
+```cmd
+C:\Windows\system32\wsl.exe -d Ubuntu --exec bash -l
+```
+
+This way, there's no need to edit the profile files.
+
+
+Also, do refer to my [Windows Setup guide: WSL section](./Windows-Setup.md#wsl-windows-subsystem-for-linux-installation-guide), since there are a few peculiarities in proxy environments.
+
+#### Windows Terminal + SSH server
+
+When developing, it will be common that the main work is all done over a Linux server with a GPU, and that the main Windows PC is just used for editing the files.
+
+To access the SSH server over a new profile, we can run the startup command like this:
+
+```cmd
+C:/Program Files/Git/bin/bash.exe -i -l -c 'ssh USER@HOST:PORT'
+```
+
+The host can also be added to the `.ssh/config` file:
+
+```
+@ ~/.ssh/config 
+Host linux_server
+    HostName xxx.xx.x.xx
+    Port xxx
+    User xxxx
+    RequestTTY force
+    RemoteCommand cd your/path/here; bash -l
+
+```
+
+Then, the command can be:
+
+```cmd
+C:/Program Files/Git/bin/bash.exe -i -l -c 'ssh USER@linux_server'
+```
+
+
+#### Windows Terminal themes
+
+I found this pretty comprehensive free [Windows Terminal themes collection](https://windowsterminalthemes.dev/).
+
+To implement a theme, all you have to do is copy the JSON code, then open Windows Terminal, go under Settings, then the lower left corner must have a `Open JSON file` button, which points to the actual Windows Terminal configuration file, where you can paste the themes where appropriate (alongside other themes, and remember to check that the commas match)
+
 
 ## WSL (Windows Subsystem for Linux) installation guide
 

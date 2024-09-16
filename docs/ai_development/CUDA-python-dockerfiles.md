@@ -36,3 +36,35 @@ pipx install toml-cli
 
 CMD ["/bin/bash"]
 ```
+
+
+
+```
+docker build --no-cache -t poetry_python:3.11.7-bookworm - << EOF
+FROM python:3.1.1.7-bookworm
+RUN apt update && \
+    apt install -y pipx
+ENV PATH=“$PATH:/root/.local/bin”
+RUN pipx install poetry==1.7.1 && pipx inject poetry poetry-plugin-export
+CMD[“/bin/bash”]
+EOF
+
+docker run -itd --ipc=host -v ${PWD%/*}:/work --shm-size=4gb --gpus ‘“device=1”’ --name my_container python:3.11.7-bookworm bash
+
+docker exec -it -w /work/project my_container bash
+
+poetry new project-name
+cd project-name
+nano pyproject.toml
+poetry install
+
+exit
+
+touch test.txt
+docker exec -it -w /work/project my_container bash
+ls -l
+
+Check UID and GID
+
+chown -R UID:GID ./*
+```
