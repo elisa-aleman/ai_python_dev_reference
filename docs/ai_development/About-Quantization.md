@@ -2,47 +2,6 @@
 
 This guide is under construction
 
-- [ ] Quantization Code implementation 
-    - [ ] Pytorch Quantization
-        - [ ] Quantization Configuration
-            - [ ] FakeQuantize and Observer classes
-            - [ ] eager fx and pt2e examples for configuration wrapping classes
-        - [ ] Quantization Methods
-            - [ ] Eager Mode
-                - [ ] Eager mode refactoring for execution
-                - [ ] Eager mode PTQ
-                    - [ ] Eager mode static
-                    - [ ] Eager mode dynamic
-                - [ ] Eager mode QAT
-            - [ ] FX Symbolic Tracing
-                - [ ] FX Symbolic Tracing Refactoring for traceability
-            - [ ] PT2E (python 2 export)
-                - [ ] PT2E refactoring
-                - [ ] PT2E PTQ
-                    - [ ] PT2E static
-                    - [ ] PT2E dynamic
-                - [ ] PT2E QAT
-        - [ ] Export method conversion
-            - [ ] Eager mode observed to FX 
-            - [ ] FX float to PT2E float
-            - [ ] FX quantized to PT2E quantized
-                - [ ] FX PTQ to PT2E PTQ
-                - [ ] FX QAT to PT2E QAT
-    - [ ] ONNX
-    - [ ] Tensorflow / Keras /TFLite
-        - [ ] TF float to PTQ
-        - [ ] TF Keras to QAT (tfmot)
-            - [ ] Sequential
-            - [ ] Functional
-- [ ] Backend conversion
-    - [ ] Python float to ONNX float
-    - [ ] ONNX float to Keras float
-    - [ ] Tensorflow / Keras float to Quantized TFLite
-    - [ ] Python quantized to ONNX quantized
-    - [ ] Python observed QAT to ONNX quantized
-    - [ ] Python float to TFLite quantized (ai_edge_torch)
-    - [ ] Python quantized to TFLite quantized (ai_edge_torch)
-
 Sources:
 
 - [Pytorch Quantization docs](https://pytorch.org/docs/stable/quantization.html)
@@ -50,7 +9,6 @@ Sources:
 - [ONNX Quantization docs](https://onnxruntime.ai/docs/performance/model-optimizations/quantization.html)
 - [Tensorflow Quantization docs](https://ai.google.dev/edge/litert/models/model_optimization?hl=en)
 - [Huggingface Quantization docs](https://huggingface.co/docs/transformers/main/en/main_classes/quantization)
-
 
 
 ## Definition
@@ -302,18 +260,11 @@ graph LR
 Sources:
 
 - [Pytorch Quantization docs](https://pytorch.org/docs/stable/quantization.html)
-- [Pytorch BackendConfig Tutorial](https://pytorch.org/tutorials/prototype/backend_config_tutorial.html)
-- [Pytorch Eager Mode PTQ Static Quantization Tutorial](https://pytorch.org/tutorials/advanced/static_quantization_tutorial.html)
-- [Pytorch Eager Mode PTQ Dynamic Quantization example LSTM](https://pytorch.org/tutorials/advanced/dynamic_quantization_tutorial.html?highlight=lstm)
-- [Pytorch FX Quantization user guide](https://pytorch.org/tutorials/prototype/fx_graph_mode_quant_guide.html)
-- [Pytorch FX PTQ Static Quantization Tutorial](https://pytorch.org/tutorials/prototype/fx_graph_mode_ptq_static.html)
-- [Pytorch FX PTQ Dynamic Quantization Tutorial](https://pytorch.org/tutorials/prototype/fx_graph_mode_ptq_dynamic.html)
-- [Pytorch 2 Export Tutorial](https://pytorch.org/tutorials/intermediate/torch_export_tutorial.html)
-- [Pytorch 2 Export Quantization Tutorial](https://pytorch.org/tutorials/prototype/quantization_in_pytorch_2_0_export_tutorial.html)
-- [Pytorch 2 Export QAT Tutorial](https://pytorch.org/tutorials/prototype/pt2e_quant_qat.html)
-- [Pytorch 2 torch compile](https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html)
 
-Throughout the development of quantization API in pytorch there has been 3 major methods:
+#### Model Quantization by Model Modes
+
+
+Throughout the development of quantization API in pytorch there has been 3 major methods depending on the mode the model is in:
 
 - **Eager Mode quantization**: The Eager Mode model (a model left as written in the class definition) is executed directly, along with quantization stubs if present.
     - This method relies on refactoring the model in such a way that the added quantization and dequantization operations are manually written inside the model.
@@ -329,6 +280,129 @@ Throughout the development of quantization API in pytorch there has been 3 major
     - Since it is traced at an operation instead of a module level, it is more easily converted to other backends.
     
 Each of them has its benefits (although eager mode is the least versatile and hardest to do correctly), and the way to implement them all is different. In all cases, some refactoring of the model might be needed, depending on compatibility issues.
+
+The modes described above aren't necessarily for quantization only; instead, they are modes of representation of a model with different capabilities each, so they will be described below.
+
+Another note is that the FX Graph mode, although very useful, has been declared as "maintenance only", which means no further development will be added. This means that some of the newer backend configurations or updates are not included at all. However, some third party models can only be trained in FX Graph mode and not in PT2E mode, so there is still use for this mode. On the other hand, a fully trained FX Graph model can then be converted to a PT2E model with some ingenuity.
+
+##### Eager Mode models
+
+Eager mode models are, in most cases, only referred to as eager mode when handling quantization, but in fact they are the default way that a model behaves when defined following the standard pytorch structures. A module is defined, and submodules can be added to it, followed by a `forward()` method that describes the call behavior of the model.
+
+A simple example is shown below:
+
+```python
+import torch
+
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,3,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3,10,1,1)
+        self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
+        # self.pool = torch.nn.MaxPool2d(28,28)
+    def forward(self,x):
+        x = self.conv(x)
+        x = self.pool(x)
+        x = torch.argmax(x,dim=1)
+        return x
+
+my_model = ExampleModel()
+```
+
+\**Note: The example models in this guide are extremely simple and will not have good results, but are used just for showing a functioning program.*
+
+To quantize a model in this mode without altering its inherent structure is impossible, since the definitions strictly only include floating point operations. It is because of this that a considerable amount of refactoring is necessary.
+
+The forward call of the model is not recorded previous to its execution as part of the model's memory, instead, it is executed in order every time that a call is made. This might seem unnecessary to describe as it should be common knowledge, but the other modes behave differently from this.
+
+##### FX Graph Mode
+
+Source:
+- [Pytorch API docs: torch.fx](https://pytorch.org/docs/stable/fx.html)
+
+An FX Graph is a trace of the calling (with arguments) of submodules, functions, methods and attributes of the model ahead of time. 
+It is a flattened representation of the model, with exception of leaf nodes, where the relationship between calls is stored in a graph.
+
+
+
+```python
+import torch
+from torch.ao.quantization.fx.tracer import QuantizationTracer
+from torch.fx import GraphModule
+
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,3,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3,10,1,1)
+        self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
+        # self.pool = torch.nn.MaxPool2d(28,28)
+    def forward(self,x):
+        x = self.conv(x)
+        x = self.pool(x)
+        x = torch.argmax(x,dim=1)
+        return x
+
+model = ExampleModel()
+print(model)
+'''
+ExampleModel(
+  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+'''
+
+# FX trace the model
+tracer = QuantizationTracer(skipped_module_names=[], skipped_module_classes=[])
+graph = tracer.trace(model)
+traced_fx = GraphModule(tracer.root, graph, 'ExampleModel')
+print(traced_fx)
+'''
+ExampleModel(
+  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+
+
+
+def forward(self, x):
+    conv = self.conv(x);  x = None
+    pool = self.pool(conv);  conv = None
+    argmax = torch.argmax(pool, dim = 1);  pool = None
+    return argmax
+    
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
+print(str(traced_fx.graph))
+'''
+graph():
+    %x : [num_users=1] = placeholder[target=x]
+    %conv : [num_users=1] = call_module[target=conv](args = (%x,), kwargs = {})
+    %pool : [num_users=1] = call_module[target=pool](args = (%conv,), kwargs = {})
+    %argmax : [num_users=1] = call_function[target=torch.argmax](args = (%pool,), kwargs = {dim: 1})
+    return argmax
+'''
+```
+
+The model now has this flattened information which can be accessed, parsed, and modified using the API described in the [Pytorch API docs: torch.fx](https://pytorch.org/docs/stable/fx.html)
+
+A `GraphModule` contains the relevant submodules that still need to be called from the `Graph`, which is composed of `Node` objects, which have information about what each operation will be carried, and where the input is coming from.
+
+A disadvantage of FX Graph mode is that the model has to be able to be flattened, with a single graph being able to handle all types of input of the model. This means that in-place modifications, boolean flag flow control and other operations aren't compatible with this mode. 
+
+This means that sometimes, refactoring is necessary for the model. However, compared to the refactoring done for Eager mode models quantization, it is less knowledge intensive of the specific backend specifications, which can be automatically added.
+
+##### PT2E Mode
+
+
+
+With the introduction of torch version 2, the `torch.export`
 
 #### Quantization Configuration
 
@@ -373,24 +447,30 @@ Fake Quantize class                                                             
 [_LearnableFakeQuantize](https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/_learnable_fake_quantize.py)                                                                                            | An undocumented private class that implements LSQ. It is presumably under development on the latest version at the time of writing (torch v2.5.0) |
 
 
-##### Eager, FX and PT2E examples for configuration wrapping classes
-
-
-
-###### BackendConfig and BackendPatternConfig
-
-
-
-###### About fused modules
-
-
-
-###### Eager Mode QConfig
+##### About fused modules
 
 Sources:
 
 - [Pytorch Quantization docs](https://pytorch.org/docs/stable/quantization.html)
-- [Pytorch BackendConfig Tutorial](https://pytorch.org/tutorials/prototype/backend_config_tutorial.html)
+- [Pytorch Eager Mode PTQ Static Quantization Tutorial](https://pytorch.org/tutorials/advanced/static_quantization_tutorial.html)
+
+During the insertion of quantize and dequantize modules in between operations in a model, some groupings of modules benefit from not undergoing quantization until all of the calculations have been finished. Moreover, some modules benefit from entirely forgoing their original structure that can be used in training and evaluation and being replaced with an operation that is optimized for evaluation only. The modules that benefit from this **fusing** of operations vary from backend to backend, but are usually the following:
+
+- Convolution + Batch Normalization + ReLU activation
+- Convolution + ReLU activation
+- Linear + Batch Normalization + ReLU activation
+- Linear + ReLU activation
+- Operation + Clamp / Clip range
+
+And so on, the usual fusing involves normalization operations which are more relevant during training, and ReLU activations or clamp or clip operations which are simply a restriction of the range of floating values. This restriction, being equivalent to the restriction imposed by the mapping to quantized values, will simply result in a different mapping that could be assumed from the start, making a double quantization unnecessary. The fusing of these nodes can be studied in [`torch.ao.nn.intrinsic`](https://pytorch.org/docs/stable/quantization-support.html#module-torch.ao.nn.intrinsic) and [`torch.ao.nn.intrinsic.qat`](https://pytorch.org/docs/stable/quantization-support.html#module-torch.ao.nn.intrinsic.qat) for pre-defined classes, and in different examples found in [`torch.ao.quantization.backend_config`](https://github.com/pytorch/pytorch/tree/main/torch/ao/quantization/backend_config) for other backend specific fusings.
+
+Each mode has its own method of fusing. While FX and PT2E modes fusing patterns can be configured without refactoring a model and will be explained in the following sections, Eager mode quantization requires a manual change to the model in order to implement this correctly. This is shown in [Eager Mode fused modules](#eager-mode-fused-modules).
+
+##### Eager Mode Quantization Configuration: QConfig and manual fused modules
+
+Sources:
+
+- [Pytorch Quantization docs](https://pytorch.org/docs/stable/quantization.html)
 - [Pytorch Eager Mode PTQ Static Quantization Tutorial](https://pytorch.org/tutorials/advanced/static_quantization_tutorial.html)
 - [Pytorch Eager Mode PTQ Dynamic Quantization example LSTM](https://pytorch.org/tutorials/advanced/dynamic_quantization_tutorial.html?highlight=lstm)
 - [Pytorch API docs: QConfig](https://pytorch.org/docs/stable/generated/torch.ao.quantization.qconfig.QConfig.html)]
@@ -404,7 +484,7 @@ Example:
 ```python
 import torch
 from torch.ao.quantization.qconfig import QConfig
-from torch.ao.quantization.observer import MinMaxObserver, PerChannelMinMaxObserver
+from torch.ao.quantization.observer import MovingAverageMinMaxObserver, MovingAveragePerChannelMinMaxObserver
 
 class ExampleModel(torch.nn.Module):
     '''
@@ -421,23 +501,48 @@ class ExampleModel(torch.nn.Module):
         x = self.quant(x)
         x = self.conv(x)
         x = self.pool(x)
-        x = torch.argmax(x)
+        x = torch.argmax(x,dim=1)
         x = self.dequant(x)
         return x
 
+my_model = ExampleModel()
+
 my_model.qconfig = QConfig(
-    activation=MinMaxObserver.with_args(
+    activation=MovingAverageMinMaxObserver.with_args(
         dtype=torch.quint8,
         qscheme=torch.per_tensor_affine,
         ),
-    weight=PerChannelMinMaxObserver.with_args(
+    weight=MovingAveragePerChannelMinMaxObserver.with_args(
         dtype=torch.qint8,
-        qscheme=torch.per_tensor_symmetric,
+        qscheme=torch.per_channel_symmetric,
         ),
     )
-```
+print(my_model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+'''
 
-\**Note: The example model in this code is extremely simple and will not have good results, but is used just for showing a functioning program.*
+torch.ao.quantization.prepare(my_model, inplace=True)
+print(my_model)
+'''
+ExampleModel(
+  (quant): QuantStub(
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (dequant): DeQuantStub()
+  (conv): Conv2d(
+    3, 10, kernel_size=(1, 1), stride=(1, 1)
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+'''
+```
 
 The model is then configured and ready for the FakeQuantize and Observer insertion during the quantization process described later.
 
@@ -460,63 +565,1116 @@ QConfig(
 '''
 ```
 
-This works fine in pytorch but when considering other backends to convert the model to, is not necessarily what we want.
+This works fine in pytorch but when considering other backends to convert the model to, is not necessarily what we want, not to mention we might prefer other observers even in a native environment.
+
+###### Eager Mode fused modules
+
+Eager mode model before adding fused modules functionality:
+```python
+import torch
+
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,3,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
+        self.conv = torch.nn.Conv2d(3,10,1,1)
+        self.bn = torch.nn.BatchNorm2d(10)
+        self.act = torch.nn.ReLU()
+        self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
+        # self.pool = torch.nn.MaxPool2d(28,28)
+    def forward(self,x):
+        x = self.quant(x)
+        x = self.conv(x)
+        x = self.bn(x)
+        x = self.act(x)
+        x = self.pool(x)
+        x = torch.argmax(x,dim=1)
+        x = self.dequant(x)
+        return x
+```
+
+Eager mode model after adding fused modules for PTQ:
+
+```python
+import torch
+
+# PTQ
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,3,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
+        self.conv = torch.ao.intrincic.ConvBNReLU2d(
+            conv=torch.nn.Conv2d(3,10,1,1),
+            bn=torch.nn.BatchNorm2d(10),
+            relu=torch.nn.ReLU(),
+            )
+        self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
+        # self.pool = torch.nn.MaxPool2d(28,28)
+    def forward(self,x):
+        x = self.quant(x)
+        x = self.conv(x)
+        x = self.pool(x)
+        x = torch.argmax(x,dim=1)
+        x = self.dequant(x)
+        return x
+    def fuse_modules(self):
+        for m in self.modules():
+            if isinstance(m,torch.ao.intrincic.ConvBNReLU2d):
+                torch.ao.quantization.fuse_modules(
+                    m,
+                    ['0','1','2'],
+                    inplace=True,
+                    )
+```
+
+Eager mode model after adding fused modules for QAT:
+```python
+import torch
+
+# QAT
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,3,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
+        self.conv = torch.ao.intrincic.qat.ConvBNReLU2d(
+            conv=torch.nn.Conv2d(3,10,1,1),
+            bn=torch.nn.BatchNorm2d(10),
+            relu=torch.nn.ReLU(),
+            )
+        self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
+        # self.pool = torch.nn.MaxPool2d(28,28)
+    def forward(self,x):
+        x = self.quant(x)
+        x = self.conv(x)
+        x = self.pool(x)
+        x = torch.argmax(x,dim=1)
+        x = self.dequant(x)
+        return x
+    def fuse_modules(self):
+        for m in self.modules():
+            if isinstance(m,torch.ao.intrincic.ConvBNReLU2d):
+                torch.ao.quantization.fuse_modules_qat(
+                    m,
+                    ['0','1','2'],
+                    inplace=True,
+                    )
+```
+
+Note that the refactoring being different introduces difficulties that aren't present in FX or PT2E modes.
+
+
+##### FX Mode Quantization Configuration
 
 ###### FX Mode QConfigMapping
 
-###### PT2E Quantizer
+Sources:
+- [Pytorch Quantization docs](https://pytorch.org/docs/stable/quantization.html)
+- [Pytorch API docs: QConfigMapping](https://pytorch.org/docs/stable/generated/torch.ao.quantization.qconfig_mapping.QConfigMapping.html)
+- [Pytorch FX Quantization user guide](https://pytorch.org/tutorials/prototype/fx_graph_mode_quant_guide.html)
+- [Pytorch BackendConfig Tutorial](https://pytorch.org/tutorials/prototype/backend_config_tutorial.html)
+- [Pytorch FX PTQ Static Quantization Tutorial](https://pytorch.org/tutorials/prototype/fx_graph_mode_ptq_static.html)
+- [Pytorch FX PTQ Dynamic Quantization Tutorial](https://pytorch.org/tutorials/prototype/fx_graph_mode_ptq_dynamic.html)
+
+QConfigMapping is the solution that FX mode quantization brought to the complexity of setting different configurations across the model if there were exceptions to the overall configuration for specific operations. It allows us to set a global QConfig, similar to the EagerMode example, but also provides optional API to detect different operations and add a specific configuration to those.
+
+For the full usage guide, I recommend reading the [Pytorch API docs: QConfigMapping](https://pytorch.org/docs/stable/generated/torch.ao.quantization.qconfig_mapping.QConfigMapping.html), but below I only show an example using global configurations.
+
+```python
+import torch
+from torch.ao.quantization.qconfig_mapping import QConfigMapping
+from torch.ao.quantization.qconfig import QConfig
+from torch.ao.quantization.observer import MovingAverageMinMaxObserver, MovingAveragePerChannelMinMaxObserver
+from torch.ao.quantization.fx.tracer import QuantizationTracer
+from torch.fx import GraphModule
+from torch.ao.quantization.fx import prepare
 
 
-#### Quantization Methods
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,3,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3,10,1,1)
+        self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
+        # self.pool = torch.nn.MaxPool2d(28,28)
+    def forward(self,x):
+        x = self.conv(x)
+        x = self.pool(x)
+        x = torch.argmax(x,dim=1)
+        return x
+
+model = ExampleModel()
+
+# define the qconfig_mapping
+qconfig_mapping = QConfigMapping().set_global(
+        QConfig(
+            activation=MovingAverageMinMaxObserver.with_args(
+                dtype=torch.quint8,
+                qscheme=torch.per_tensor_affine,
+                ),
+            weight=MovingAveragePerChannelMinMaxObserver.with_args(
+                dtype=torch.qint8,
+                qscheme=torch.per_channel_symmetric,
+                ),
+            )
+        )
+
+# FX trace the model
+tracer = QuantizationTracer(skipped_module_names=[], skipped_module_classes=[])
+graph = tracer.trace(model)
+traced_fx = GraphModule(tracer.root, graph, 'ExampleModel')
+print(traced_fx)
+'''
+ExampleModel(
+  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+
+
+
+def forward(self, x):
+    conv = self.conv(x);  x = None
+    pool = self.pool(conv);  conv = None
+    argmax = torch.argmax(pool, dim = 1);  pool = None
+    return argmax
+    
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
+# FX prepare the quantization nodes
+example_inputs = (torch.randn(1,3,28,28),)
+prepared_fx = prepare(
+    traced_fx,
+    qconfig_mapping=qconfig_mapping,
+    node_name_to_scope=tracer.node_name_to_scope,
+    is_qat=True, # convenient even if not QAT
+    example_inputs=example_inputs,
+    backend_config=None, # default native
+    )
+print(prepared_fx)
+'''
+GraphModule(
+  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (conv): Conv2d(
+    3, 10, kernel_size=(1, 1), stride=(1, 1)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+  )
+  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+
+
+
+def forward(self, x):
+    activation_post_process_0 = self.activation_post_process_0(x);  x = None
+    conv = self.conv(activation_post_process_0);  activation_post_process_0 = None
+    activation_post_process_1 = self.activation_post_process_1(conv);  conv = None
+    pool = self.pool(activation_post_process_1);  activation_post_process_1 = None
+    argmax = torch.argmax(pool, dim = 1);  pool = None
+    return argmax
+    
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
+print(hasattr(prepared_fx, 'qconfig'))
+'''
+False
+'''
+
+print(hasattr(prepared_fx, 'meta'))
+'''
+True
+'''
+import pprint
+pprint.pprint(prepared_fx.meta)
+'''
+False
+True
+{'_observed_graph_module_attrs': ObservedGraphModuleAttrs(node_name_to_qconfig={'argmax': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){}),
+                                                                                'conv': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7ece769243a0>}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7ece769243a0>}),
+                                                                                'output': None,
+                                                                                'pool': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7ece76924280>}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7ece76924280>}),
+                                                                                'x': None},
+                                                          node_name_to_scope={'argmax': ('',
+                                                                                         None),
+                                                                              'conv': ('conv',
+                                                                                       <class 'torch.nn.modules.conv.Conv2d'>),
+                                                                              'output': ('',
+                                                                                         None),
+                                                                              'pool': ('pool',
+                                                                                       <class 'torch.nn.modules.pooling.AdaptiveMaxPool2d'>),
+                                                                              'x': ('',
+                                                                                    None)},
+                                                          prepare_custom_config=PrepareCustomConfig({}),
+                                                          equalization_node_name_to_qconfig={'argmax': None,
+                                                                                             'conv': None,
+                                                                                             'output': None,
+                                                                                             'pool': None,
+                                                                                             'x': None},
+                                                          qconfig_mapping=QConfigMapping (
+ global_qconfig
+  QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){})
+ object_type_qconfigs
+  OrderedDict()
+ module_name_regex_qconfigs
+  OrderedDict()
+ module_name_qconfigs
+  OrderedDict()
+ module_name_object_type_order_qconfigs
+  OrderedDict()
+),
+                                                          is_qat=True,
+                                                          observed_node_names={'conv'},
+                                                          is_observed_standalone_module=False,
+                                                          standalone_module_input_quantized_idxs=None,
+                                                          standalone_module_output_quantized_idxs=None)}
+'''
+```
+
+As printed above, there are new fake_quantize/observer nodes added to the forward code and to the module as submodules, but the configuration is not saved in the `qconfig` attribute but instead in a `meta` dictionary that stores the configuration for all inserted nodes.
+
+###### FX Mode BackendConfig and BackendPatternConfig
+
+
+Sources:
+- [Pytorch Quantization docs](https://pytorch.org/docs/stable/quantization.html)
+- [Pytorch API docs: QConfigMapping](https://pytorch.org/docs/stable/generated/torch.ao.quantization.qconfig_mapping.QConfigMapping.html)
+- [Pytorch API docs: torch.fx](https://pytorch.org/docs/stable/fx.html)
+- [Pytorch FX Quantization user guide](https://pytorch.org/tutorials/prototype/fx_graph_mode_quant_guide.html)
+- [Pytorch BackendConfig Tutorial](https://pytorch.org/tutorials/prototype/backend_config_tutorial.html)
+- [`torch.ao.quantization.backend_config` README](https://github.com/pytorch/pytorch/tree/main/torch/ao/quantization/backend_config)
+- [Pytorch FX PTQ Static Quantization Tutorial](https://pytorch.org/tutorials/prototype/fx_graph_mode_ptq_static.html)
+- [Pytorch FX PTQ Dynamic Quantization Tutorial](https://pytorch.org/tutorials/prototype/fx_graph_mode_ptq_dynamic.html)
+
+
+Reading the [`torch.ao.quantization.backend_config` README](https://github.com/pytorch/pytorch/tree/main/torch/ao/quantization/backend_config) should give a better introduction to the configuration than what I can convey here, but I will still summarize.
+
+Different backends will have different specifications of which modules can and cannot be quantized, what data types they allow, 8-bit value ranges, which modules should be fused or not, or which operations should share the same quantization parameters than their previous operation.
+
+While new backends can be configured for manually by specifying a new `BackendConfig` class in each project, pytorch has several configurations already available:
+
+```python
+from torch.ao.quantization.backend_config import (
+    get_fbgemm_backend_config,
+    get_native_backend_config,
+    get_qnnpack_backend_config,
+    get_tensorrt_backend_config,
+    get_executorch_backend_config,
+    )
+```
+
+Namely for the following backends:
+
+- `get_fbgemm_backend_config`: [FBGEMM](https://github.com/pytorch/FBGEMM)
+- `get_native_backend_config`: Pytorch native inference
+- `get_qnnpack_backend_config`: [QNNPACK](https://github.com/pytorch/QNNPACK), an outdated backend later replaced by XNNPACK
+- `get_tensorrt_backend_config`: [TensorRT](https://github.com/NVIDIA/TensorRT), an NVIDIA specialized backend that makes full use of the GPU CUDA, making it faster than native inference.
+- `get_executorch_backend_config`: [executorch](https://github.com/pytorch/executorch), an on-device AI backend for mobile inference of torch models.
+
+There are also a few backend configurations available in third party packages that we can use for reference:
+
+- [`mmrazor.structures.quantization.backend_congig.openvino`](https://github.com/open-mmlab/mmrazor/blob/main/mmrazor/structures/quantization/backend_config/openvino.py): This backend configuration was created in torch v1.13.0, before the [backwards incompatible change to BackendPatternConfig introduced in torch 2.0.0](https://github.com/pytorch/pytorch/pull/90698), which can be seen in the [torch 2.0.0 release notes](https://github.com/pytorch/pytorch/releases/tag/v2.0.0)
+
+However, it should be easy to modify to the latest version if necessary.
+
+###### Backend specification example: ONNXRuntime split quantization parameters
+
+There is [onnx](https://github.com/onnx/onnx) exporting functionality in pytorch ([`torch.onnx.export`](https://pytorch.org/docs/stable/onnx.html#torchscript-based-onnx-exporter) for Eager and FX Graph modes, and [`torch.onnx.dynamo_export`](https://pytorch.org/docs/stable/onnx_dynamo.html) for dynamo and PT2E models).
+
+This is usually done as a middle step for later conversion to another backend that is compatible with onnx but not directly with pytorch.
+
+However, there is also the option to run these models in [ONNXRuntime](https://github.com/microsoft/onnxruntime/), which is also capable of inference with quantized models, with a variety of [execution providers](https://onnxruntime.ai/docs/execution-providers/) for the specific hardware / device that the model will be executed on.
+
+While most of the specifications of the ONNXRuntime backend can be similar to the pytorch native backend, there are some variations.
+
+An example not provided in the source documentation is the [ONNXRuntime quantized split node](https://github.com/microsoft/onnxruntime/blob/ee6a91533cc8034a78b183cc1d6595170a366886/onnxruntime/python/tools/quantization/operators/split.py#L63), which has specifications that the previous node and all children of the split node should have the same quantization parameters. However, the [pytorch native backend configuration](https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/backend_config/native.py), which imports from the [`_common_operator_config_utils`](https://github.com/pytorch/pytorch/blob/8225e7706ebe900593ccb6790f51e4251e7de16d/torch/ao/quantization/backend_config/_common_operator_config_utils.py#L606), can only configure shared parameters for single tensor outputs, and not for tuples. I personally add a post_processing method before exporting to ONNX if I need split nodes to be quantized correctly:
+
+```python
+import torch
+from torch.ao.quantization.qconfig_mapping import QConfigMapping
+from torch.ao.quantization.qconfig import QConfig
+from torch.ao.quantization.observer import MovingAverageMinMaxObserver, MovingAveragePerChannelMinMaxObserver
+from torch.ao.quantization.fx.tracer import QuantizationTracer
+from torch.fx import GraphModule
+from torch.ao.quantization.fx import prepare
+from torch.ao.quantization.backend_config import ObservationType, get_native_backend_config
+
+
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,3,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3,30,1,1)
+        self.spconv1 = torch.nn.Conv2d(15,5,1,1)
+        self.spconv2 = torch.nn.Conv2d(15,5,1,1)
+        self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
+        # self.pool = torch.nn.MaxPool2d(28,28)
+    def forward(self,x):
+        x = self.conv(x)
+        y,z = torch.split(x,2)
+        y = self.spconv1(y)
+        z = self.spconv2(z)
+        x = torch.cat([y,z], dim=1)
+        x = self.pool(x)
+        x = torch.argmax(x,dim=1)
+        return x
+    
+model = ExampleModel()
+
+# define the qconfig_mapping
+qconfig_mapping = QConfigMapping().set_global(
+        QConfig(
+            activation=MovingAverageMinMaxObserver.with_args(
+                dtype=torch.quint8,
+                qscheme=torch.per_tensor_affine,
+                ),
+            weight=MovingAveragePerChannelMinMaxObserver.with_args(
+                dtype=torch.qint8,
+                qscheme=torch.per_channel_symmetric,
+                ),
+            )
+        )
+
+# FX trace the model
+tracer = QuantizationTracer(skipped_module_names=[], skipped_module_classes=[])
+graph = tracer.trace(model)
+traced_fx = GraphModule(tracer.root, graph, 'ExampleModel')
+print(traced_fx)
+'''
+ExampleModel(
+  (conv): Conv2d(3, 30, kernel_size=(1, 1), stride=(1, 1))
+  (spconv1): Conv2d(15, 5, kernel_size=(1, 1), stride=(1, 1))
+  (spconv2): Conv2d(15, 5, kernel_size=(1, 1), stride=(1, 1))
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+
+
+
+def forward(self, x):
+    conv = self.conv(x);  x = None
+    split = torch.functional.split(conv, 2, dim = 0);  conv = None
+    getitem = split[0]
+    getitem_1 = split[1];  split = None
+    spconv1 = self.spconv1(getitem);  getitem = None
+    spconv2 = self.spconv2(getitem_1);  getitem_1 = None
+    cat = torch.cat([spconv1, spconv2], dim = 1);  spconv1 = spconv2 = None
+    pool = self.pool(cat);  cat = None
+    argmax = torch.argmax(pool, dim = 1);  pool = None
+    return argmax
+    
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
+# FX prepare the quantization nodes
+example_inputs = (torch.randn(1,3,28,28),)
+backend_config = get_native_backend_config()
+prepared_fx = prepare(
+    traced_fx,
+    qconfig_mapping=qconfig_mapping,
+    node_name_to_scope=tracer.node_name_to_scope,
+    is_qat=True, # convenient even if not QAT
+    example_inputs=example_inputs,
+    backend_config=backend_config,
+    )
+print(prepared_fx)
+'''
+GraphModule(
+  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (conv): Conv2d(
+    3, 30, kernel_size=(1, 1), stride=(1, 1)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+  )
+  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (spconv1): Conv2d(
+    15, 5, kernel_size=(1, 1), stride=(1, 1)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+  )
+  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (spconv2): Conv2d(
+    15, 5, kernel_size=(1, 1), stride=(1, 1)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+  )
+  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+
+
+
+def forward(self, x):
+    activation_post_process_0 = self.activation_post_process_0(x);  x = None
+    conv = self.conv(activation_post_process_0);  activation_post_process_0 = None
+    activation_post_process_1 = self.activation_post_process_1(conv);  conv = None
+    split = torch.functional.split(activation_post_process_1, 2, dim = 0);  activation_post_process_1 = None
+    getitem = split[0]
+    activation_post_process_2 = self.activation_post_process_2(getitem);  getitem = None
+    getitem_1 = split[1];  split = None
+    activation_post_process_4 = self.activation_post_process_4(getitem_1);  getitem_1 = None
+    spconv1 = self.spconv1(activation_post_process_2);  activation_post_process_2 = None
+    activation_post_process_3 = self.activation_post_process_3(spconv1);  spconv1 = None
+    spconv2 = self.spconv2(activation_post_process_4);  activation_post_process_4 = None
+    activation_post_process_5 = self.activation_post_process_5(spconv2);  spconv2 = None
+    cat = torch.cat([activation_post_process_3, activation_post_process_5], dim = 1);  activation_post_process_3 = activation_post_process_5 = None
+    activation_post_process_6 = self.activation_post_process_6(cat);  cat = None
+    pool = self.pool(activation_post_process_6);  activation_post_process_6 = None
+    argmax = torch.argmax(pool, dim = 1);  pool = None
+    return argmax
+    
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
+def propagate_split_share_qparams(
+        observed_module,
+        backend_config,
+        ):
+    share_qparams_ops = [
+        pattern_cfg.pattern
+        for pattern_cfg in backend_config.configs
+        if pattern_cfg.observation_type == ObservationType.OUTPUT_SHARE_OBSERVER_WITH_INPUT
+        ]
+    # First share qparams for all split children
+    for current_node in observed_module.graph.nodes:
+        if current_node.target in [torch.split, torch.chunk]:
+            previous_nodes = current_node.all_input_nodes
+            if len(previous_nodes) == 1:
+                previous_node = previous_nodes[0]
+                # if the previous node before split is fake_quantize:
+                if 'activation_post_process_' in previous_node.name:
+                    child_nodes = [user for user in current_node.users.keys()]
+                    for child_node in child_nodes:
+                        child_node_users = [user for user in child_node.users.keys()]
+                        if len(child_node_users)==1:
+                            child_node_next = child_node_users[0]
+                            # if the nodes after split are fake_quantize:
+                            if 'activation_post_process_' in child_node_next.name:
+                                child_node_next.target = previous_node.target
+    # do another pass for all share qparams nodes in case they were acidentally altered.
+    for current_node in observed_module.graph.nodes:
+        if current_node.target in share_qparams_ops:
+            previous_nodes = current_node.all_input_nodes
+            if len(previous_nodes) == 1:
+                previous_node = previous_nodes[0]
+                # if the previous node before split is fake_quantize:
+                if 'activation_post_process_' in previous_node.name:
+                    user_nodes = [user for user in current_node.users.keys()]
+                    if len(user_nodes) == 1:
+                        user_node = user_nodes[0]
+                        # if the nodes after the op are fake_quantize:
+                        if 'activation_post_process_' in user_node.name:
+                            user_node.target = previous_node.target
+    observed_module.delete_all_unused_submodules()
+    observed_module.recompile()
+
+
+propagate_split_share_qparams(prepared_fx, backend_config)
+print(prepared_fx)
+'''
+GraphModule(
+  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (conv): Conv2d(
+    3, 30, kernel_size=(1, 1), stride=(1, 1)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+  )
+  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (spconv1): Conv2d(
+    15, 5, kernel_size=(1, 1), stride=(1, 1)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+  )
+  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (spconv2): Conv2d(
+    15, 5, kernel_size=(1, 1), stride=(1, 1)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+  )
+  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+
+
+
+def forward(self, x):
+    activation_post_process_0 = self.activation_post_process_0(x);  x = None
+    conv = self.conv(activation_post_process_0);  activation_post_process_0 = None
+    activation_post_process_1 = self.activation_post_process_1(conv);  conv = None
+    split = torch.functional.split(activation_post_process_1, 2, dim = 0);  activation_post_process_1 = None
+    getitem = split[0]
+    activation_post_process_2 = self.activation_post_process_1(getitem);  getitem = None
+    getitem_1 = split[1];  split = None
+    activation_post_process_4 = self.activation_post_process_1(getitem_1);  getitem_1 = None
+    spconv1 = self.spconv1(activation_post_process_2);  activation_post_process_2 = None
+    activation_post_process_3 = self.activation_post_process_3(spconv1);  spconv1 = None
+    spconv2 = self.spconv2(activation_post_process_4);  activation_post_process_4 = None
+    activation_post_process_5 = self.activation_post_process_5(spconv2);  spconv2 = None
+    cat = torch.cat([activation_post_process_3, activation_post_process_5], dim = 1);  activation_post_process_3 = activation_post_process_5 = None
+    activation_post_process_6 = self.activation_post_process_6(cat);  cat = None
+    pool = self.pool(activation_post_process_6);  activation_post_process_6 = None
+    argmax = torch.argmax(pool, dim = 1);  pool = None
+    return argmax
+    
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+```
+
+Another example is that QAT fused nodes would be exported in their float mode, without being folded into quantized nodes.
+
+This is a lot more complicated to solve, and needs to have some post processing alterations before the exporting of a model.
+
+```python
+# Modified from outdated `mmrazor.models.quantizers.native_quantizer.TorchNativeQuantizer.post_process_for_deploy
+# reference:
+# https://github.com/open-mmlab/mmrazor/blob/main/mmrazor/models/quantizers/native_quantizer.py#L253
+
+import torch
+from torch.ao.quantization.fx.graph_module import ObservedGraphModule
+from torch.ao.quantization import (
+    disable_observer,
+    enable_fake_quant,
+    enable_observer,
+    )
+from torch.ao.nn.intrinsic import _FusedModule
+
+SUPPORT_QAT_MODULES: tuple = (
+    torch.nn.intrinsic.qat.modules.ConvBn1d,
+    torch.nn.intrinsic.qat.modules.ConvBn2d,
+    torch.nn.intrinsic.qat.modules.ConvBn3d,
+    torch.nn.intrinsic.qat.modules.ConvBnReLU1d,
+    torch.nn.intrinsic.qat.modules.ConvBnReLU2d,
+    torch.nn.intrinsic.qat.modules.ConvBnReLU3d,
+    torch.nn.intrinsic.qat.modules.ConvReLU1d,
+    torch.nn.intrinsic.qat.modules.ConvReLU2d,
+    torch.nn.intrinsic.qat.modules.ConvReLU3d,
+    torch.nn.intrinsic.qat.modules.LinearBn1d,
+    torch.nn.intrinsic.qat.modules.LinearReLU,
+    torch.nn.qat.modules.Conv1d,
+    torch.nn.qat.modules.Conv2d,
+    torch.nn.qat.modules.Conv3d,
+    torch.nn.qat.modules.Linear,
+    )
+
+MERGE_BN_MAPPINGS: dict = {
+    torch.nn.intrinsic.qat.modules.ConvBn1d: torch.nn.qat.modules.Conv1d,
+    torch.nn.intrinsic.qat.modules.ConvBn2d: torch.nn.qat.modules.Conv2d,
+    torch.nn.intrinsic.qat.modules.ConvBn3d: torch.nn.qat.modules.Conv3d,
+    torch.nn.intrinsic.qat.modules.ConvBnReLU1d: torch.nn.intrinsic.qat.modules.ConvReLU1d,
+    torch.nn.intrinsic.qat.modules.ConvBnReLU2d: torch.nn.intrinsic.qat.modules.ConvReLU2d,
+    torch.nn.intrinsic.qat.modules.ConvBnReLU3d: torch.nn.intrinsic.qat.modules.ConvReLU3d,
+    torch.nn.intrinsic.qat.modules.LinearBn1d: torch.nn.qat.modules.Linear,
+}
+
+
+def post_process_for_deploy(
+        observed_module: ObservedGraphModule,
+        qconfig,
+        device: str = 'cpu',
+        update_weight_with_fakequant: bool = False,
+        keep_w_fake_quant: bool = False,
+    ):
+    """
+    `SUPPORT_QAT_MODULES` will be convert to normal modules,
+    and BN will be merged and consolidated into conv layers.
+
+    Args:
+        observed_module (ObservedGraphModule): Modules after fused and
+            observed.
+        keep_w_fake_quant (bool, optional): Bool to determine whether to
+            keep weight fake-quant op, depending on the backend. Defaults
+            to False.                
+    """
+
+    def traverse(module):
+        for name, child in module.named_children():
+            # Trace `SUPPORT_QAT_MODULES` recursively.
+            if isinstance(child, SUPPORT_QAT_MODULES):
+                # We add w_fakequant once in case some ptq methods have
+                # specific operations such as Adaround. So we do Quantize
+                # to perform these operations and do dequantize to
+                # introduce quantization loss in advance.
+                weight_fakequant = child.weight_fake_quant
+
+                # `to_float()` function fuse BN into conv or conv_relu, and
+                # also convert a qat module to a normal module.
+                # source url: https://github.com/pytorch/pytorch/blob/master/torch/nn/intrinsic/qat/modules/conv_fused.py # noqa: E501
+                float_child = child.to_float()
+
+                # Only necessary for cases where the fake quant operation
+                # is removed from the graph
+                if update_weight_with_fakequant:
+                    if issubclass(type(float_child), _FusedModule):
+                        float_child[0].weight = weight_fakequant(
+                            float_child[0].weight.detach().clone())
+                    else:
+                        float_child.weight = weight_fakequant(
+                            float_child.weight.detach().clone())
+                # This is decided by backend type, some backend need
+                # explicitly keep the fake quant structure, others don't.
+                # ONNXRuntime uses it
+                if keep_w_fake_quant:
+                    for m in float_child.modules():
+                        setattr(m, 'qconfig', qconfig)
+                    if type(child) in MERGE_BN_MAPPINGS:
+                        new_class = MERGE_BN_MAPPINGS[type(child)]
+                        new_child = new_class.from_float(float_child).to(device)
+                    else:
+                        new_child = type(child).from_float(float_child).to(
+                            device)
+
+                    # because weight fakequants and observers are replaced
+                    # with base fakequants and base observers, some
+                    # initialized args need to be update by running
+                    # weight_fake_quant.
+                    enable_observer(new_child)
+                    new_child.weight_fake_quant(new_child.weight)
+                    disable_observer(new_child)
+                else:
+                    new_child = float_child.to(device)
+                setattr(module, name, new_child)
+            else:
+                traverse(child)
+
+    observed_module.apply(enable_fake_quant)
+    observed_module.apply(disable_observer)
+    traverse(observed_module)
+```
+
+Calling the `to_float` method on the QAT fused modules will fuse the Batch Normalization modules into the actual Convolution weight and bias tensors.
+
+##### PT2E Quantization Configuration: Quantizer class
+
+- [Pytorch Quantization docs](https://pytorch.org/docs/stable/quantization.html)
+- [Pytorch 2 Export Tutorial](https://pytorch.org/tutorials/intermediate/torch_export_tutorial.html)
+- [Pytorch 2 Export Quantization Tutorial](https://pytorch.org/tutorials/prototype/quantization_in_pytorch_2_0_export_tutorial.html)
+- [Pytorch 2 Export QAT Tutorial](https://pytorch.org/tutorials/prototype/pt2e_quant_qat.html)
+- [Pytorch 2 torch compile](https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html)
+
+While the Eager mode works by manually setting the QConfig class to each submodule, and the FX mode works by assigning a QConfigMapping class to the preparation process, the PT2E mode works by adding [QuantizationAnnotation](https://github.com/pytorch/pytorch/blob/v2.4.0/torch/ao/quantization/quantizer/quantizer.py#L114) objects with a custom annotate method added to the customized [Quantizer](https://github.com/pytorch/pytorch/blob/v2.4.0/torch/ao/quantization/quantizer/quantizer.py) subclass that we would use.
+
+Currently, there are only a few backends prepared for this without adding a custom Quantizer subclass:
+
+- [EmbeddingQuantizer](https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/quantizer/embedding_quantizer.py)
+- [X86InductorQuantizer](https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/quantizer/x86_inductor_quantizer.py)
+- [XNNPackQuantizer](https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/quantizer/xnnpack_quantizer.py)
+
+There's also third party quantizers, such as the one for [`ai_edge_torch`](https://github.com/google-ai-edge/ai-edge-torch) used for exporting torch models to TFLite.
+
+- [`ai_edge_torch.quantize.pt2e_quantizer.PT2E_Quantizer`](https://github.com/google-ai-edge/ai-edge-torch/blob/v0.2.0/ai_edge_torch/quantize/pt2e_quantizer.py#L243)
+
+
+
+##### Custom FX BackendConfigs based on PT2E code
+
+Since the FX Graph mode has been declared as "maintenance only", it will not get further updated since the pytorch team began developing the PT2E mode.
+
+However, some functions are useful in FX Graph mode that are not fully yet implemented in PT2E, so I decided to create some custom BackendConfigs on my own.
+
+###### Custom FX BackendConfigs based on PT2E code: AIEdgeTorch
+
+[AI Edge Torch](https://github.com/google-ai-edge/ai-edge-torch/) is a newer tool made to convert pytorch models to a [TFLite](https://ai.google.dev/edge/litert) backend using PT2E.
+
+It is extremely new in development (the current latest version is 0.2.0 at the time of writing), and not all models can be converted to PT2E during training (although they can be refactored to be exported to PT2E post-training), so I decided to write a new backend configuration for FX model training, followed by a later conversion to PT2E
+
+Based on [`ai_edge_torch.quantize.pt2e_quantizer.PT2EQuantizer`](https://github.com/google-ai-edge/ai-edge-torch/blob/main/ai_edge_torch/quantize/pt2e_quantizer.py)
+
+
+```python
+'''
+Supported per tensor symmetric, per channel symmetric for weights
+Reference:
+https://github.com/google-ai-edge/ai-edge-torch/blob/f7585fedbc8d3386b0b9e2f5d147fbb1d3fd2d37/ai_edge_torch/quantize/pt2e_quantizer.py#L51C3-L67C4
+https://ai.google.dev/edge/litert/models/quantization_spec
+
+Supported static PTQ and QAT
+Reference:
+https://github.com/google-ai-edge/ai-edge-torch/blob/f7585fedbc8d3386b0b9e2f5d147fbb1d3fd2d37/ai_edge_torch/quantize/pt2e_quantizer.py#L251C3-L265C4
+STATIC_OPS = [
+      "linear",
+      "addmm",
+      "conv_relu",
+      "conv",
+      "adaptive_avg_pool2d",
+      "gru_io_only",
+      "max_pool2d",
+      "add_relu",
+      "add",
+      "mul_relu",
+      "mul",
+      "cat",
+      "fixed_qparams",
+  ]
+
+Supported dynamic ops
+Reference:
+https://github.com/google-ai-edge/ai-edge-torch/blob/f7585fedbc8d3386b0b9e2f5d147fbb1d3fd2d37/ai_edge_torch/quantize/pt2e_quantizer.py#L267C3-L272C4
+DYNAMIC_OPS = [
+      "linear",
+      "addmm",
+      "conv",
+      "conv_relu",
+  ]
+
+Notes: Linear+ReLU, Linear+BN+ReLU, can be supported with post_process_for_deploy
+
+Fixed QParams ops
+Reference:
+https://github.com/google-ai-edge/ai-edge-torch/blob/f7585fedbc8d3386b0b9e2f5d147fbb1d3fd2d37/ai_edge_torch/quantize/pt2e_quantizer_utils.py#L711C1-L723C15
+- Sigmoid
+- Softmax
+
+'''
+
+# mypy: allow-untyped-defs
+
+from typing import Union, Callable
+import torch
+
+from torch.ao.quantization.backend_config._common_operator_config_utils import (
+    _get_linear_configs,
+    _get_conv_configs,
+    _get_binary_op_configs,
+    _get_cat_config,
+    _get_tensor_info_op_configs,
+    _add_fixed_qparams_to_dtype_configs,
+    # _get_share_qparams_op_configs, # redefine here
+    # _get_fixed_qparams_op_configs, # redefine here
+    # _get_rnn_op_configs,           # redefine here
+)
+
+from torch.ao.quantization.backend_config import (
+    BackendConfig,
+    BackendPatternConfig,
+    DTypeConfig,
+    DTypeWithConstraints,
+    ObservationType,
+    )
+
+
+# __all__ = [
+# ]
+
+# ===================
+# |  DTYPE CONFIGS  |
+# ===================
+
+# weighted op int8 dtype config
+# this is config for ops that has quantized weights, like linear, conv
+weighted_op_qint8_dtype_config = DTypeConfig(
+    input_dtype=torch.qint8,
+    output_dtype=torch.qint8,
+    weight_dtype=torch.qint8,
+    bias_dtype=torch.float,
+)
+
+non_weighted_op_qint8_dtype_config = DTypeConfig(
+    input_dtype=torch.qint8,
+    output_dtype=torch.qint8,
+)
+
+# weighted_dynamic_qint8_dtype_config = DTypeConfig(
+#     input_dtype=torch.qint8,
+#     output_dtype=torch.float,
+#     weight_dtype=torch.qint8,
+#     bias_dtype=torch.float,
+#     # currently the dtype check is not yet enabled, so we provided the dtype_configs but
+#     # it is not really used yet,
+#     # we will enable it a bit later after we moved everything to backend_config_dict
+#     is_dynamic=True,
+# )
+
+# =====================
+# |  BACKEND CONFIGS  |
+# =====================
+
+def _get_addmm_configs(dtype_configs: list[DTypeConfig]) -> list[BackendPatternConfig]:
+    addmm_configs = [
+        BackendPatternConfig(torch.addmm)
+        .set_observation_type(ObservationType.OUTPUT_USE_DIFFERENT_OBSERVER_AS_INPUT)
+        .set_dtype_configs(dtype_configs)
+        ._set_input_type_to_index(
+            {
+                "bias": 0,
+                "input": 1,
+                "weight": 2,
+            }
+        )
+    ]
+    return addmm_configs
+
+
+def _get_cat_config(dtype_configs: list[DTypeConfig]) -> BackendPatternConfig:
+    cat_config = (
+        BackendPatternConfig(torch.cat)
+        .set_observation_type(ObservationType.OUTPUT_SHARE_OBSERVER_WITH_INPUT)
+        .set_dtype_configs(dtype_configs)
+    )
+    return cat_config
+
+
+
+# Add constraints for fixed qparams ops like sigmoid and tanh to ensure values
+# fall within the proper ranges, e.g. [0, 1] for sigmoid, [-1, 1] for tanh
+_FIXED_QPARAM_OP_0TO1_CONSTRAINTS = DTypeWithConstraints(
+    dtype=torch.qint8,
+    quant_min_lower_bound=-128,
+    quant_max_upper_bound=127,
+    scale_exact_match=1.0 / 256.0,
+    zero_point_exact_match=-128,
+)
+# _FIXED_QPARAM_OP_NEG1TO1_CONSTRAINTS = DTypeWithConstraints(
+#     dtype=torch.qint8,
+#     quant_min_lower_bound=-128,
+#     quant_max_upper_bound=127,
+#     scale_exact_match=2.0 / 256.0,
+#     zero_point_exact_match=0,
+# l
+_FIXED_QPARAMS_OP_TO_CONSTRAINTS: dict[Union[Callable, str], DTypeWithConstraints] = {
+    torch.nn.Sigmoid: _FIXED_QPARAM_OP_0TO1_CONSTRAINTS,
+    torch.sigmoid: _FIXED_QPARAM_OP_0TO1_CONSTRAINTS,
+    "sigmoid": _FIXED_QPARAM_OP_0TO1_CONSTRAINTS,
+    "sigmoid_": _FIXED_QPARAM_OP_0TO1_CONSTRAINTS,
+    torch.nn.Softmax: _FIXED_QPARAM_OP_0TO1_CONSTRAINTS,
+}
+
+def _get_fixed_qparams_op_configs(
+    dtype_configs: list[DTypeConfig],
+) -> list[BackendPatternConfig]:
+    fixed_qparams_op_configs = []
+    for fixed_qparam_op, constraints in _FIXED_QPARAMS_OP_TO_CONSTRAINTS.items():
+        new_dtype_configs = _add_fixed_qparams_to_dtype_configs(
+            dtype_configs, constraints
+        )
+        fixed_qparams_op_configs.append(
+            BackendPatternConfig(fixed_qparam_op)
+            .set_observation_type(
+                ObservationType.OUTPUT_USE_DIFFERENT_OBSERVER_AS_INPUT
+            )  # noqa: E131
+            .set_dtype_configs(new_dtype_configs)
+        )
+    return fixed_qparams_op_configs
+
+
+def _get_share_qparams_op_configs(dtype_configs):
+    """Get the operator config for the operators that works for both float and quantized input
+    if input is quantized, the output Tensor shares the same quantization parameter
+    with input.
+    Example operator: adaptive_avgpool2d, reshape, transpose, maxpool2d
+    Example observed operator:
+    observer_0 - adaptive_avgpool2d - observer_0 (same observer instance as input)
+    """
+
+    def _get_share_qprams_op_backend_config(op):
+        return (
+            BackendPatternConfig(op)
+            .set_observation_type(ObservationType.OUTPUT_SHARE_OBSERVER_WITH_INPUT)
+            .set_dtype_configs(dtype_configs)
+        )
+
+    share_qparams_ops = [
+        torch.nn.AdaptiveAvgPool2d,
+        torch.nn.MaxPool2d,
+        torch.nn.functional.adaptive_avg_pool2d,
+        torch.nn.functional.max_pool2d,
+        torch.flatten,
+        torch.repeat_interleave,
+        torch.transpose,
+        torch.squeeze,
+        torch.stack,
+        torch.unsqueeze,
+        "permute",
+        "repeat",
+        "repeat_interleave",
+        "reshape",
+        "resize_",
+        "squeeze",
+        "squeeze_",
+        "transpose",
+        "unsqueeze",
+        "unsqueeze_",
+        "view",
+    ]
+    return [_get_share_qprams_op_backend_config(op) for op in share_qparams_ops]
+
+
+def _get_rnn_op_configs(dtype_configs: list[DTypeConfig]) -> list[BackendPatternConfig]:
+    rnn_op_configs = []
+    for rnn_op, ref_rnn_op in [
+        (torch.nn.GRU, torch.ao.nn.quantized.reference.GRU),
+    ]:
+        rnn_op_configs.append(
+            BackendPatternConfig(rnn_op)
+            .set_observation_type(
+                ObservationType.OUTPUT_USE_DIFFERENT_OBSERVER_AS_INPUT
+            )  # noqa: E131
+            .set_dtype_configs(dtype_configs)
+            .set_root_module(rnn_op)
+            .set_reference_quantized_module(ref_rnn_op)
+        )
+    return rnn_op_configs
+
+
+
+
+def get_ai_edge_torch_backend_config() -> BackendConfig:
+    """
+    Return the `BackendConfig` for PyTorch Native backend (fbgemm/qnnpack) with various additional fp16 ops.
+    """
+    linear_dtype_configs = [
+        weighted_op_qint8_dtype_config,
+        weighted_dynamic_qint8_dtype_config,
+        ]
+    addmm_dtype_configs = [
+        weighted_op_qint8_dtype_config,
+        weighted_dynamic_qint8_dtype_config,
+        ]
+    cat_dtype_configs = [
+        non_weighted_op_qint8_dtype_config,
+        ]
+    conv_dtype_configs = [
+        weighted_op_qint8_dtype_config,
+        weighted_dynamic_qint8_dtype_config
+        ]
+    binary_op_dtype_configs = [
+        non_weighted_op_qint8_dtype_config,
+        ]
+    fixed_qparams_op_dtype_configs = [
+        non_weighted_op_qint8_dtype_config,
+        ]
+    share_qparams_op_dtype_configs = [
+        non_weighted_op_qint8_dtype_config,
+        ]
+    tensor_info_op_dtype_configs = [
+        non_weighted_op_qint8_dtype_config,
+        ]
+    rnn_op_dtype_configs = [
+        non_weighted_op_qint8_dtype_config,
+        ]
+    return (
+    BackendConfig("ai_edge_torch")
+        .set_backend_pattern_configs(_get_linear_configs(linear_dtype_configs))
+        .set_backend_pattern_configs(_get_addmm_configs(addmm_dtype_configs))
+        .set_backend_pattern_configs(_get_conv_configs(conv_dtype_configs))
+        .set_backend_pattern_configs(_get_binary_op_configs(binary_op_dtype_configs))
+        .set_backend_pattern_configs(_get_fixed_qparams_op_configs(fixed_qparams_op_dtype_configs))
+        .set_backend_pattern_configs(_get_share_qparams_op_configs(share_qparams_op_dtype_configs))
+        .set_backend_pattern_configs(_get_tensor_info_op_configs(tensor_info_op_dtype_configs))
+        .set_backend_pattern_configs(_get_rnn_op_configs(rnn_op_dtype_configs))
+        .set_backend_pattern_config(_get_cat_config(cat_dtype_configs))
+        )
+
+
+def get_ai_edge_torch_backend_config_dict():
+    """
+    Return the `BackendConfig` for ai_edge_torch backend in dictionary form.
+    """
+    return get_ai_edge_torch_backend_config().to_dict()
+
+```
+
+###### Custom FX BackendConfigs based on PT2E code: XNNPack
+
+In progress...
+
+###### Custom FX BackendConfigs based on PT2E code: OpenVino
+
+In progress...
+
+#### Quantization Methods and model refactoring
+
+In progress...
 
 ##### Eager Mode
 
+In progress...
+
 ###### Eager mode refactoring for execution
 
-###### Eager mode PTQ
+In progress...
+
+##### FX Symbolic Tracing
+
+In progress...
+
+###### FX Symbolic Tracing Refactoring for traceability
+
+In progress...
+
+##### PT2E
+
+In progress...
+
+###### TorchDynamo and torch.compile traceability refactoring
+
+In progress...
+
+#### Quantization complete examples
+
+In this section, I will show actual example models training and being quantized in the following ways:
+
+Model mode | PTQ static  | PTQ dynamic | QAT         |
+-----------|-------------|-------------|-------------|
+Eager mode | [see example]() | [see example]() | [see example]() |
 
 <!-- # from torchvistion.datasets import MNIST -->
+
+
+##### Eager mode PTQ static example
 
 **Eager mode static**
 
 
+##### Eager mode PTQ dynamic example
+
 **Eager mode dynamic**
 
 
-###### Eager mode QAT
-
-##### FX Symbolic Tracing
-
-###### FX Symbolic Tracing Refactoring for traceability
-
-###### FX Symbolic Tracing PTQ
-
-**FX Symbolic Tracing static**
+##### Eager mode QAT example
 
 
-**FX Symbolic Tracing dynamic**
+##### FX Graph mode PTQ static example
+
+**FX Graph mode static**
 
 
-###### FX Symbolic Tracing QAT
+
+##### FX Graph mode PTQ dynamic example
+
+**FX Graph mode dynamic**
 
 
-##### PT2E (python 2 export)
+##### FX Graph mode QAT example
 
-###### PT2E refactoring
 
-###### PT2E PTQ
+##### PT2E PTQ static example
 
 **PT2E static**
 
 
+##### PT2E PTQ dynamic example
+
 **PT2E dynamic**
 
+##### PT2E QAT example
 
-###### PT2E QAT
+
 
 #### Export method conversion
 
-##### Eager mode observed to FX
+##### Eager mode observed to FX observed
 
 ##### FX float to PT2E float
 
@@ -526,7 +1684,10 @@ This works fine in pytorch but when considering other backends to convert the mo
 
 ###### FX QAT to PT2E QAT
 
+
 ### ONNX
+
+
 
 ### Tensorflow / Keras /TFLite
 
@@ -541,29 +1702,23 @@ This works fine in pytorch but when considering other backends to convert the mo
 
 ## Backend conversion
 
-### Python float to ONNX float
+### Pytorch float to ONNX float
 
 ### ONNX float to Keras float
 
 ### Tensorflow / Keras float to Quantized TFLite
 
-### Python quantized to ONNX quantized
+### Pytorch quantized to ONNX quantized
 
-### Python observed QAT to ONNX quantized
+### Pytorch observed QAT to ONNX quantized
 
-### Python float to TFLite quantized (ai_edge_torch)
+### Pytorch to TFLite (ai_edge_torch)
 
-### Python quantized to TFLite quantized (ai_edge_torch)
+#### Pytorch float PT2E to TFLite quantized (ai_edge_torch)
 
+#### Pytorch quantized PT2E to TFLite quantized (ai_edge_torch)
 
-
-
-
-
-
-
-
-
+#### Pytorch FX quantized to PT2E to TFLite quantized (ai_edge_torch)
 
 ```python
 
@@ -607,3 +1762,10 @@ pt2e_prepared_model.meta = fx_prepared_model.meta
 ```
 
 the above almost works but the quint8 config makes it not work in TFLite which uses qint8 config, which somehow won't work with torch native backend. 
+
+
+
+Memos:
+
+- Hailo8 backend:https://github.com/hailo-ai/hailo_model_zoo
+    - updates with database?
