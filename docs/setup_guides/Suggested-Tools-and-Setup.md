@@ -25,7 +25,7 @@ Here are my recommendations:
 
 ### Windows Terminal with Cmder, Git Bash, and WSL profiles
 
-It comes pre-installed, but compared to the pre-installed MacOSX terminal, it pretty much has all the functions that you need for customizing it to your taste, and the capability to run behind the scenes with better software than it initially has (looking at you, PowerShell). It also is not [Electron](https://www.electronjs.org/apps) based, which makes it **lightweight and fast** in comparison to other bloated options based in Electron. Don't use Electron for things where speed is paramount, please.
+It comes pre-installed, but compared to the pre-installed MacOSX terminal, it pretty much has all the functions that you need for customizing it to your taste, and the capability to run behind the scenes with better software than it initially has (looking at you, PowerShell). It also is **not [Electron](https://www.electronjs.org/apps) based**, which makes it **lightweight and fast** in comparison to other bloated options based in Electron. Don't use Electron for things where speed is paramount, please.
 
 I will split this in three sections:
 
@@ -170,17 +170,43 @@ I've seen chatter about newer terminal emulators, like Terminator or Kitty, but 
  
 ## Environment and CLI tools
 
-### anyenv
+### anyenv to install other environment managers (mac and linux)
 
-- [ ] anyenv (mac and linux)
-    - [ ] https://github.com/anyenv/anyenv
-    - [ ] clone, add path for bash
-    - [ ] `echo 'eval "$(anyenv init -)"' >> ~/.bash_profile`, remove the hyphen suggested.
-    - [ ] A warning will appear if I don't have a manifest directory
-    - [ ] `mkdir ~/.config`
-    - [ ] `anyenv install --init`
-    - [ ] Actually pyenv latest version does not work with it so don't use or recommend for pyenv
-    - [ ] Used it for nodenv for Node.js (specifically for mermaid-cli)
+[anyenv](https://github.com/anyenv/anyenv) is a mac and linux command line tool that makes it easier to install other "env" style environment manager tools, like nodenv for JavaScript, for example. 
+
+It also used to be able to handle pyenv, but at the time of writing (2024-09-07) there was a compatibility issue. Follow the next section instead for that. 
+
+Install:
+
+```sh
+# @ shell
+
+git clone --depth=1 https://github.com/anyenv/anyenv ~/.anyenv
+echo 'export PATH="$HOME/.anyenv/bin:$PATH"' >> ~/.bash_profile
+echo 'eval "$(anyenv init)"' >> ~/.bash_profile
+
+```
+
+A warning will appear if I don't have a manifest directory, but it is defined automatically if we have a `~/.config/` folder. Once made, we can initialize anyenv.
+
+
+
+```sh
+# @ shell
+
+mkdir ~/.config
+anyenv install --init
+```
+
+We can now install any of the available applications (except pyenv, for the moment, as mentioned above).
+
+To see a list of which environment managers can be installed:
+
+```sh
+# @ shell
+
+anyenv 
+```
 
 ### pyenv / pyenv-win
 
