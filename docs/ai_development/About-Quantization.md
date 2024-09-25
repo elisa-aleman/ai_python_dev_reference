@@ -398,11 +398,70 @@ A disadvantage of FX Graph mode is that the model has to be able to be flattened
 
 This means that sometimes, refactoring is necessary for the model. However, compared to the refactoring done for Eager mode models quantization, it is less knowledge intensive of the specific backend specifications, which can be automatically added.
 
-##### PT2E Mode
+##### Pytorch 2 Export (PT2E) Mode
 
+Sources:
+- [Pytorch API docs: torch.export](https://pytorch.org/docs/stable/export.html)
+- [Pytorch torch.export Tutorial](https://pytorch.org/tutorials/intermediate/torch_export_tutorial.html)
+- [Pytorch API docs: TorchDynamo APIs for fine-grained tracing](https://pytorch.org/docs/stable/torch.compiler_fine_grain_apis.html)
+- [Pytorch API docs: torch.export IRs: Core Aten IR](https://pytorch.org/docs/stable/torch.compiler_ir.html#core-aten-ir)
 
+With the introduction of torch version 2, the [`torch.export`](https://pytorch.org/docs/stable/export.html),  functionality was added.
 
-With the introduction of torch version 2, the `torch.export`
+With either an initial Eager mode or FX Graph mode model, the PT2E process uses TorchDynamo to trace the model in its most granular form, while still restricting the trace to maintain single-graph representation to be able to export the model to other backends. While TorchDynamo allows for multi-graph representation to avoid issues when tracing through flow control, for loops, if conditions, etc, the `torch.export` process also needs to avoid those to work correctly. Therefore, most (but not all) changes to the model for it to be exportable need to be made similarly to FX Graph mode. The difference however, is that FX Graph mode allows for skipping the tracing of certain nodes, while torch.export must be fully granular.
+
+The result is a model that has only calls to the C++ API operators in `torch.ops.aten`, listed in the [Core Aten intermediate representation table](https://pytorch.org/docs/stable/torch.compiler_ir.html#core-aten-ir). These "ops" (operators) are the building blocks of torch models, and were originally only used internally, but are now useful in the exported graph to find equivalent operators in other backends, such as [OpenXLA](https://github.com/openxla/xla), for example, on [torch-xla](https://github.com/pytorch/xla).
+
+Here's an example:
+
+```python
+import torch
+
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,3,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3,10,1,1)
+        self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
+        # self.pool = torch.nn.MaxPool2d(28,28)
+    def forward(self,x):
+        x = self.conv(x)
+        x = self.pool(x)
+        x = torch.argmax(x,dim=1)
+        return x
+
+model = ExampleModel()
+print(model)
+'''
+ExampleModel(
+  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+'''
+
+example_inputs = (torch.randn(1,3,28,28),)
+
+pt2e_traced_model = torch.export(
+    model,
+    example_inputs,
+    ).module()
+
+print(pt2e_traced_model)
+'''
+---------------------------------------------------------------------------
+TypeError                                 Traceback (most recent call last)
+<ipython-input-2-1ed0da7af0ff> in <cell line: 29>()
+     27 example_inputs = (torch.randn(1,3,28,28),)
+     28 
+---> 29 pt2e_traced_model = torch.export(
+     30     model,
+     31     example_inputs,
+
+TypeError: 'module' object is not callable
+'''
+```
 
 #### Quantization Configuration
 
@@ -1275,7 +1334,7 @@ There's also third party quantizers, such as the one for [`ai_edge_torch`](https
 
 - [`ai_edge_torch.quantize.pt2e_quantizer.PT2E_Quantizer`](https://github.com/google-ai-edge/ai-edge-torch/blob/v0.2.0/ai_edge_torch/quantize/pt2e_quantizer.py#L243)
 
-
+As 
 
 ##### Custom FX BackendConfigs based on PT2E code
 
@@ -1617,7 +1676,7 @@ In progress...
 
 In progress...
 
-###### TorchDynamo and torch.compile traceability refactoring
+###### torch.export and TorchDynamo/torch.compile traceability refactoring
 
 In progress...
 
