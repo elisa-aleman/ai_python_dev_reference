@@ -1,4 +1,3 @@
-
 # Linux (or WSL) setup environment for development
 
 This guide is under construction
@@ -20,34 +19,13 @@ I keep this tutorial handy in case I do a clean OS install or if I need to check
 
 ## WSL installation guide
 
-https://www.groovypost.com/howto/install-windows-subsystem-for-linux-in-windows-11/
+If you're using WSL, first read the [guide I wrote for Windows](./Windows-Setup.md#wsl-windows-subsystem-for-linux-installation-guide)
 
-1. Open the cmd with administrator privileges
-2. `wsl --install`
-3. Restart computer
-4. Make username under new Linux terminal
+Remember that to run docker in WSL, it has to be installed in Windows using Docker Desktop.
 
+## Terminal
 
-### WSL: Paths to directories outside of the Linux environment
-
-If in the above tutorial for separate git accounts, for example, you needed to use paths to locations in the Windows system, you can replace C: with /mnt/c/
-
-
-### WSL: About .profile and .bash_profile
-
-There is a difference between running an interactive shell inside of a started up Linux system, say, if you had Ubuntu installed the regular way, and running the main WSL window. 
-
-Running the WSL software inside Windows opens a login shell, which is different from the interactive shell we are used to.
-
-Login shells load .profile, which then reads .bashrc if the shell being used is bash. However, .profile is ignored if there exists a .bash_profile, which means usually that .bashrc will never be read, and so will also .bash_aliases not be read.
-
-This can be fixed in a few ways:
-
-1. Run the command `bash` every time at start up to open an interactive shell inside the login shell. The only difference this makes is that to exit WSL via commands you'd have to run `exit` on the interactive shell and then on the login shell, twice.
-
-2. Move all the contents of .bash_profile to .profile, then delete .bash_profile so that there's nothing stopping all the initial codes from running even in a login shell.
-
-3. Add `source ~/.profile` to the beginning of .bash_profile so that it is run regardless, and therefore also loads .bashrc if necessary. Personally I chose this one.
+Refer to my section in [Suggested Tools and Setup: GNU Terminal for Linux](./Suggested-Tools-and-Setup.md#gnu-terminal-for-linux)
 
 
 ## Basic Settings
@@ -71,7 +49,6 @@ I can't work without seeing hidden files, so in Ubuntu we can do `CTRL+H` and th
 To set it as the default:
 
 https://help.ubuntu.com/stable/ubuntu-help/nautilus-views.html.en
-
 
 ### Install basic apt and apt-get software
 
@@ -101,7 +78,9 @@ sudo apt-get install \
     zlib1g-dev
 ```
 
+### Setup git
 
+Follow the [Git Setup and Customization](./Git-Setup-and-Customization.md) for more details.
 
 ## Install Docker Engine for Linux.
 
@@ -115,7 +94,9 @@ https://docs.docker.com/engine/install/ubuntu/
 
 Reboot after installing.
 
+## Install Python
 
+Follow my [Python setup guide](./Python-Setup.md)
 
 ## CUDA and GPU settings
 
@@ -142,6 +123,8 @@ apt remove --purge libcuda*
 Be prepared to run your server in console only mode, since you'll be altering the graphics drivers during this process.
 
 However I personally prefer to use the [`nvidia/cuda` docker images](https://hub.docker.com/r/nvidia/cuda)
+
+For specific examples where I used CUDA compatible images, see my [CUDA python dockerfiles document](../ai_development/CUDA-python-dockerfiles.md)
 
 ---
 

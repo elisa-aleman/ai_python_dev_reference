@@ -11,6 +11,10 @@ TODO:
 
 This is how I set up a fresh mac to start working in machine learning and programming. My lab runs under a proxy, so all the settings have that one extra ...sigh... task to work correctly. I keep this tutorial handy in case I do a clean OS install or if I need to check some of my initial settings.
 
+## Terminal
+
+Refer to my section in [Suggested Tools and Setup: iTerm2 for MacOSX](./Suggested-Tools-and-Setup.md#iterm2-for-macosx)
+
 
 ## Basic Settings
 
@@ -220,7 +224,9 @@ And add the following:
 proxy = {PROXY_HOST}:{PORT} 
 ```
 
+## Setup git
 
+Follow the [Git Setup and Customization](./Git-Setup-and-Customization.md) for more details.
 
 ## Install Docker Desktop for Mac
 
@@ -236,6 +242,9 @@ The desktop app needs to be running before being able to run commands on the ter
 
 Test:`docker container --list`
 
+## Install Python
+
+Follow my [Python setup guide](./Python-Setup.md)
 
 ---
 
