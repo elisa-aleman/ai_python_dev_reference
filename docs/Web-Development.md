@@ -1,9 +1,9 @@
 # Web development setup
 
 TODO:
+- [ ] Add style guide for location comments
 - [ ] Re-check old narrative
 - [X] Check all syntax highlights and location comments
-- [ ] Add style guide for location comments
 - [ ] Wrap all links
 - [ ] Write about Python FastAPI to replace old Flask docs
 - [ ] type hint inherits

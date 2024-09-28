@@ -17,7 +17,7 @@ ENV FORCE_CUDA="1"
 # cannot remove LANG even though https://bugs.python.org/issue19846 is fixed
 # last attempted removal of LANG broke many users:
 # https://github.com/docker-library/python/pull/570
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 
 # avoid tzdata from interrupting build to ask location
 RUN apt-get update; \
@@ -27,8 +27,7 @@ RUN apt-get update; \
 # runtime dependencies
 # pyenv see https://github.com/pyenv/pyenv/wiki#troubleshooting--faq
 # plus common utilities
-RUN apt update; \
-    apt install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
         apt-utils \
         build-essential \
         ca-certificates \
@@ -43,7 +42,7 @@ RUN apt update; \
         libreadline-dev \
         libsqlite3-dev \
         libssl-dev \
-        libxml12-dev \
+        libxml2-dev \
         libxmlsec1-dev \
         llvm \
         make \
@@ -55,13 +54,12 @@ RUN apt update; \
         wget \
         xz-utils \
         zlib1g-dev \
-        ; \
-    rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # install pyenv and python 3.11.10
 # as of 2024-09, pytorch supports 3.12 but tensorflow seems to have some issues
 # https://github.com/tensorflow/tensorflow/issues/62003
-RUN git clone --depth=1 https://github.com/pyenv/pyenv.git .pyenv
+RUN git clone --depth=1 https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT="${HOME}/.pyenv"
 ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${PATH}"
 
@@ -73,7 +71,7 @@ RUN pyenv rehash
 RUN pip install pipx
 ENV PATH="$PATH:/root/.local/bin"
 RUN pipx install poetry && \
-    pipx inject poetry poetry-plugin-export \
+    pipx inject poetry poetry-plugin-export && \
     pipx install toml-cli
 
 CMD ["/bin/bash"]

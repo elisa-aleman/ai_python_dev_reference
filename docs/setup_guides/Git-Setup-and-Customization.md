@@ -1,9 +1,9 @@
 # Git setup guide
 
 TODO:
+- [ ] Add style guide for location comments
 - [ ] Update "Manage multiple accounts" section with newer knowledge
 - [ ] Check all syntax highlights and location comments
-- [ ] Add style guide for location comments
 - [ ] Wrap all links
 - [ ] ssh rsa update needs `HostKeyAlgorithms=ssh-rsa` and `PubkeyAcceptedAlgorithms=+ssh-rsa` since ssh update deprecates rsa
 - [ ] ssh GitHub urls can be `git@HOST:username/repo.git` from the ssh config file instead of `git@github.com:username/repo.git` to specify which key to use within the same repo. The HOST might be a nickname for this connection, meanwhile, Hostname must be the actual URL to the host

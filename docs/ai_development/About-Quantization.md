@@ -10,6 +10,8 @@ Sources:
 - [Tensorflow Quantization docs](https://ai.google.dev/edge/litert/models/model_optimization?hl=en)
 - [Huggingface Quantization docs](https://huggingface.co/docs/transformers/main/en/main_classes/quantization)
 
+TODO:
+- [ ] Add style guide for location comments
 
 ## Definition
 

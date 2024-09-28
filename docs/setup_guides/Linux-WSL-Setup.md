@@ -3,10 +3,10 @@
 This guide is under construction
 
 TODO:
+- [ ] Add style guide for location comments
 - [ ] Re-check old narrative
 - [ ] Add comments about proxy?
 - [ ] Check all syntax highlights and location comments
-- [ ] Add style guide for location comments
 - [ ] Wrap all links
 - [ ] propagate relevant parts of suggested tools guide to OS specific guides with links to this main document
 

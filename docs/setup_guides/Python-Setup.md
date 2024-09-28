@@ -1,5 +1,8 @@
 # Python Setup
 
+TODO:
+- [ ] Add style guide for location comments
+
 ## pyenv / pyenv-win
 
 [Pyenv](https://github.com/pyenv/pyenv) is a Python version manager that allows you to isolate different installations of python in the same system. It also makes it easy to uninstall without unintended consequences when you need to start from fresh for whatever reason.
@@ -366,7 +369,7 @@ In the case of a Dockerfile, of course after having installed python via pyenv a
 RUN pip install pipx
 ENV PATH="$PATH:/root/.local/bin"
 RUN pipx install poetry && \
-    pipx inject poetry poetry-plugin-export \
+    pipx inject poetry poetry-plugin-export && \
     pipx install toml-cli
 ```
 
@@ -439,7 +442,7 @@ COPY --from=requirements /src/requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 ```
 
-For specific examples where I used CUDA compatible images, see my [CUDA python dockerfiles document](../ai_development/CUDA-python-dockerfiles.md)
+For specific examples where I used CUDA compatible images, see my [CUDA python poetry dockerfiles document](../ai_development/CUDA-python-poetry-dockerfiles.md)
 
 
 ## toml-cli for automated edits of the pyproject.toml

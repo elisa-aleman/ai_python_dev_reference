@@ -1,9 +1,9 @@
-FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
-ENV CUDA_INT=121
-ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.1
+ENV CUDA_INT=118
+ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.8
 ENV CUDNN_DIR=/opt/cudnn
-ENV CUDACXX=/usr/local/cuda/bin/nvcc-12.1
+ENV CUDACXX=/usr/local/cuda/bin/nvcc-11.8
 
 ENV LD_LIBRARY_PATH=/usr/local/lib64
 ENV LD_LIBRARY_PATH=$CUDA_TOOLKIT_ROOT_DIR/lib64:$CUDNN_DIR/lib64:$LD_LIBRARY_PATH
@@ -17,7 +17,7 @@ ENV FORCE_CUDA="1"
 # cannot remove LANG even though https://bugs.python.org/issue19846 is fixed
 # last attempted removal of LANG broke many users:
 # https://github.com/docker-library/python/pull/570
-ENV LANG=C.UTF-8
+ENV LANG C.UTF-8
 
 # avoid tzdata from interrupting build to ask location
 RUN apt-get update; \
@@ -54,16 +54,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         wget \
         xz-utils \
         zlib1g-dev \
-        # usability dependencies for audio and computer vision AI
-        ffmpeg \
-        g++-12 \
-        gcc-12 \
-        libgl1 \
-        libgomp1 \
-        libopencv-dev \
-        libprotobuf-dev protobuf-compiler \
-        libsm6 \
-        libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
 # install pyenv and python 3.11.10
@@ -83,14 +73,5 @@ ENV PATH="$PATH:/root/.local/bin"
 RUN pipx install poetry && \
     pipx inject poetry poetry-plugin-export && \
     pipx install toml-cli
-
-# Install cmake
-# requires libprotobuf-dev protobuf-compiler
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.30.4/cmake-3.30.4-linux-x86_64.tar.gz && \
-    tar -zxvf cmake-3.30.4-linux-x86_64.tar.gz && \
-    rm cmake-3.30.4-linux-x86_64.tar.gz && \
-    mv cmake-* cmake
-
-ENV PATH=/root/cmake/bin:$PATH
 
 CMD ["/bin/bash"]

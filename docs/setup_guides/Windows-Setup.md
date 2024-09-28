@@ -1,10 +1,10 @@
 # Windows setup environment for development
 
 TODO:
+- [ ] Add style guide for location comments
 - [ ] Re-check old narrative
 - [ ] Add comments about proxy?
 - [ ] Check all syntax highlights and location comments
-- [ ] Add style guide for location comments
 - [ ] Wrap all links
 - [ ] propagate relevant parts of suggested tools guide to OS specific guides with links to this main document
 
@@ -145,6 +145,22 @@ The desktop app needs to be running before being able to run commands on the she
 
 Test:`docker container --list`
 
+The images built and pulled will be stored in:
+
+```
+%USERPROFILE%\AppData\Local\Docker\wsl
+```
+
+Which is on the C drive.
+
+If you have a concern about the memory space you can change it in the settings:
+
+1. Stop the Docker engine and quit any open WSL instances
+2. Docker Desktop app settings
+3. Resources
+4. Advanced
+5. Disk Image Location
+6. Change it and click Apply & Restart
 
 ### Install zstd and rsync for Git Bash
 

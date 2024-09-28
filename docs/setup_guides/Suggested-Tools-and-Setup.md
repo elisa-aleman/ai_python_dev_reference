@@ -5,7 +5,6 @@ This guide is under construction
 TODO:
 
 - [ ] Add style guide for location comments
-- [ ] Once guide is finished propagate relevant parts to OS specific guides with links to this main document
 
 I'm an AI engineer with a PhD and years of experience developing in several languages, but mostly python (most of the AI runs on python and C++). Throughout the years I've accumulated experience using more and more convenient tools, solving issues I never imagined I would have. This guide is both for me and anyone reading this to save themselves some time when starting up either as a new beginner developer or an experienced one who just bought a new computer or did a clean install of their OS and needs to start all over again (happens more often than I'd like to admit).
 
@@ -115,7 +114,7 @@ C:/Program Files/Git/bin/bash.exe -i -l -c 'ssh USER@HOST:PORT'
 The host can also be added to the `.ssh/config` file:
 
 ```
-@ ~/.ssh/config 
+# @ ~/.ssh/config 
 Host linux_server
     HostName xxx.xx.x.xx
     Port xxx

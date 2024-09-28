@@ -2,9 +2,9 @@
 # Mac Python setup environment for development (on a proxy)
 
 TODO:
+- [ ] Add style guide for location comments
 - [ ] Re-check old narrative
 - [ ] Check all syntax highlights and location comments
-- [ ] Add style guide for location comments
 - [ ] Wrap all links
 - [ ] propagate relevant parts of suggested tools guide to OS specific guides with links to this main document
 
@@ -240,7 +240,25 @@ https://docs.docker.com/desktop/install/mac-install/
 
 The desktop app needs to be running before being able to run commands on the terminal.
 
+<!-- 
+Can't confirm:
+
+
+If you have a concern about the memory space you can change it in the settings:
+
+1. Quit any containers being used and close any terminals
+2. Docker Desktop app settings
+3. Resources
+4. Advanced
+5. Disk Image Location
+6. Change it and click Apply & Restart
+
+-->
+
+
 Test:`docker container --list`
+
+
 
 ## Install Python
 

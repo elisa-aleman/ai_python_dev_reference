@@ -7,7 +7,7 @@ WORKDIR /root/workspace
 RUN pip install pipx
 ENV PATH="$PATH:/root/.local/bin"
 RUN pipx install poetry && \
-    pipx inject poetry poetry-plugin-export \
+    pipx inject poetry poetry-plugin-export && \
     pipx install toml-cli
 
 CMD ["/bin/bash"]

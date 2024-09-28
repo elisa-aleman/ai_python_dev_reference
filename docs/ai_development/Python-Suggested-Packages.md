@@ -4,9 +4,10 @@
 This section needs heavy editing, after years, some of the libraries are not recommended anymore.
 !!!!!!!!!!!!
 
+TODO:
+- [ ] Add style guide for location comments
 - [ ] Update all python package suggestions (pretty outdated)
     - [ ] Add pyaudio stuff because it was complicated.
-    - [ ] Opencv with poetry
 
 <!-- This is my generic fresh start install so I can work. Usually I'd install all of them in general, but recently I only install the necessary libraries under venv. There's more libraries with complicated installations in other repositories of mine, and you might not wanna run this particular piece of code without checking what I'm doing first. For example, you might have a specific version of Tensorflow that you want, or some of these you won't use. But I'll leave it here as reference.
 
@@ -116,75 +117,16 @@ pip install minepy
 
 with CPU and no extra options:
 
+2024-09 note, PYPI opencv-python-headless is pretty much all that's needed for CPU builds, and has ffmpeg now.
+https://github.com/opencv/opencv-python
+
 ```
 python -m pip install -U opencv-python opencv-contrib-python
 ```
 
 
 
-##### Install OpenCV with ffmpeg
-
-Install dependencies:
-
-```
-apt-get update
-apt-get upgrade
-apt-get install build-essential
-apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
-apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
-apt-get install libavcodec-dev libavformat-dev libswscale-dev libv4l-dev
-apt-get install libxvidcore-dev libx264-dev
-apt-get install libgtk-3-dev
-apt-get install libatlas-base-dev gfortran pylint
-apt-get install python2.7-dev python3.5-dev python3.6-dev
-apt-get install unzip
-```
-
-Now the ffmpeg dependency:
-```
-add-apt-repository ppa:jonathonf/ffmpeg-3
-apt update
-apt install ffmpeg libav-tools x264 x265
-```
-
-Check the version:
-```
-ffmpeg
-```
-
-Download and build opencv
-
-```
-wget https://github.com/opencv/opencv/archive/3.4.0.zip -O opencv-3.4.0.zip
-wget https://github.com/opencv/opencv_contrib/archive/3.4.0.zip -O opencv_contrib-3.4.0.zip
-
-unzip opencv-3.4.0.zip
-unzip opencv_contrib-3.4.0.zip
-
-cd  opencv-3.4.0
-mkdir build_3.5
-mkdir build
-cd build
-```
-
-Make, but remember to replace Python versions:
-
-```
-which python
-```
-
-```
-cmake -DCMAKE_BUILD_TYPE=Release \
-    -D WITH_FFMPEG=ON \
-    -D PYTHON3_EXECUTABLE=<path to your python> \
-    -D CMAKE_INSTALL_PREFIX=/usr/local \
-    -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-3.4.0/modules \
-    -D OPENCV_ENABLE_NONFREE=True ..
-
-make -j8        #(where -j8 is for 8 cores in the server cpu)
-make install
-ldconfig
-```
+##### Install OpenCV with CUDA
 
 
- -->
+The exception would be for CUDA, for which there are a few pre-built wheels 

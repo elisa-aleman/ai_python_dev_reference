@@ -13,10 +13,7 @@ TODO:
 - [ ] CUDA 12.1 (CTranslate2 now supports too) repos install methods
 - [ ] Write about not updating to CUDA 12 too fast because of specific repositories not supporting it yet.
 - [ ] Dockerfile examples
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] Add style guide for location comments
 
 ```
 cd (project with c depends)
@@ -101,25 +98,6 @@ although currently mine throws errors when importing :(
 
 <!--
 
-```
-docker run -itd --ipc=host -v ${PWD%/*}:/work --shm-size=4gb --gpus ‘“device=1”’ --name my_container python:3.11.7-bookworm bash
 
-docker exec -it -w /work/project my_container bash
-
-poetry new project-name
-cd project-name
-nano pyproject.toml
-poetry install
-
-exit
-
-touch test.txt
-docker exec -it -w /work/project my_container bash
-ls -l
-
-Check UID and GID
-
-chown -R UID:GID ./*
-```
 
 -->
