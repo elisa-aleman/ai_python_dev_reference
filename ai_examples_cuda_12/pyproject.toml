@@ -1,12 +1,19 @@
 [tool.poetry]
-name = "ai-examples-cuda-12"
+name = "ai-examples"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+description = "AI model example code for training and quantization, as well as converting, pytorch, onnx, tflite, and ai_edge_torch"
+authors = ["Elisa Aleman <elisa.claire.aleman.carreon@gmail.com>"]
+license = "GPL-3.0-or-later"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "~3.11"
+torch = "2.4.0"
+torchvision = "*"
+tensorflow-cpu = "*"
+onnx = "*"
+onnxruntime = "*"
+ai-edge-torch = "^0.2.0"
 
 
 [build-system]

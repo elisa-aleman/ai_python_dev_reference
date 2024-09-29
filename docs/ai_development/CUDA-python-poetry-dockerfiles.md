@@ -160,7 +160,6 @@ USER $USERNAME
 ```
 
 
-
 ### Attach to container
 
 TODO:
@@ -196,19 +195,35 @@ poetry shell
 
 # @ ai_dev_example::poetry_shell::/v/ai_python_dev_reference/ai_examples_cuda_12
 poetry install
+python
 ```
 
-But in any other case you can make your own:
+But in any other case you can make your own, this is what I did for the above example:
+
 
 ```sh
 # @ ai_dev_example::/v/ai_python_dev_reference
-cd ..
-poetry new my_project
-cd my_project
+mkdir ai_examples_cuda_12
+cd ai_examples_cuda_12
+poetry init \
+    --name "ai_examples" \
+    --description "AI model example code for training and quantization, as well as converting, pytorch, onnx, tflite, and ai_edge_torch" \
+    --python "~3.11" \
+    --author "Elisa Aleman <elisa.claire.aleman.carreon@gmail.com>" \
+    --license "GPL-3.0-or-later" \
+    --no-interaction
+mkdir ai_examples
+touch ai_examples/__init__.py
+touch README.md
+
+poetry add torch==2.4.0 torchvision@* tensorflow-cpu@* onnx@* onnxruntime@* ai_edge_torch
+poetry install
 poetry shell
 
-# @ ai_dev_example::poetry_shell::/v/my_project/
-poetry install
+# @ ai_dev_example::poetry_shell::/v/ai_python_dev_reference/ai_examples_cuda_12
+python
 ```
+
+More details on the command and info I entered at [the poetry pyproject.toml documentation](https://python-poetry.org/docs/pyproject/)
 
 `poetry install` will install the dependencies stated in the `pyproject.toml` and `poetry.lock` files created when adding projects.
