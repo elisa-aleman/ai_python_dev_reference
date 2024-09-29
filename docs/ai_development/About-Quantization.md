@@ -257,6 +257,160 @@ graph LR
 
 ## Quantization Code implementation
 
+### Examples environment
+
+Example code was run on a docker container with CUDA 12.1 CUDNN 8 poetry and python 3.11.10:
+
+
+```Dockerfile
+# @ ./env_build/dockerfiles/poetry_python_-_3-11_cuda12-1_cv-builds.dockerfile
+
+FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+
+ENV CUDA_INT=121
+ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.1
+ENV CUDNN_DIR=/opt/cudnn
+ENV CUDACXX=/usr/local/cuda/bin/nvcc-12.1
+
+ENV LD_LIBRARY_PATH=/usr/local/lib64
+ENV LD_LIBRARY_PATH=$CUDA_TOOLKIT_ROOT_DIR/lib64:$CUDNN_DIR/lib64:$LD_LIBRARY_PATH
+
+ENV HOME="/root"
+WORKDIR /root/workspace
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV FORCE_CUDA="1"
+
+# cannot remove LANG even though https://bugs.python.org/issue19846 is fixed
+# last attempted removal of LANG broke many users:
+# https://github.com/docker-library/python/pull/570
+ENV LANG=C.UTF-8
+
+# avoid tzdata from interrupting build to ask location
+RUN apt-get update; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata; \
+    apt-get clean
+
+# runtime dependencies
+# pyenv see https://github.com/pyenv/pyenv/wiki#troubleshooting--faq
+# plus common utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        apt-utils \
+        build-essential \
+        ca-certificates \
+        curl \
+        git \
+        libbluetooth-dev \
+        libbz2-dev \
+        libffi-dev \
+        liblzma-dev \
+        libncurses5-dev \
+        libncursesw5-dev \
+        libreadline-dev \
+        libsqlite3-dev \
+        libssl-dev \
+        libxml2-dev \
+        libxmlsec1-dev \
+        llvm \
+        make \
+        nano \
+        tk-dev \
+        unzip \
+        uuid-dev \
+        vim \
+        wget \
+        xz-utils \
+        zlib1g-dev \
+        # usability dependencies for audio and computer vision AI
+        ffmpeg \
+        g++-12 \
+        gcc-12 \
+        libgl1 \
+        libgomp1 \
+        libopencv-dev \
+        libprotobuf-dev protobuf-compiler \
+        libsm6 \
+        libxext6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# install pyenv and python 3.11.10
+# as of 2024-09, pytorch supports 3.12 but tensorflow seems to have some issues
+# https://github.com/tensorflow/tensorflow/issues/62003
+RUN git clone --depth=1 https://github.com/pyenv/pyenv.git ~/.pyenv
+ENV PYENV_ROOT="${HOME}/.pyenv"
+ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${PATH}"
+
+RUN pyenv install 3.11.10
+RUN pyenv global 3.11.10
+RUN pyenv rehash
+
+# Install poetry with pipx
+RUN pip install pipx
+ENV PATH="$PATH:/root/.local/bin"
+RUN pipx install poetry && \
+    pipx inject poetry poetry-plugin-export && \
+    pipx install toml-cli
+
+# Install cmake
+# requires libprotobuf-dev protobuf-compiler
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.30.4/cmake-3.30.4-linux-x86_64.tar.gz && \
+    tar -zxvf cmake-3.30.4-linux-x86_64.tar.gz && \
+    rm cmake-3.30.4-linux-x86_64.tar.gz && \
+    mv cmake-* cmake
+
+ENV PATH=/root/cmake/bin:$PATH
+
+CMD ["/bin/bash"]
+```
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+docker pull nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+docker build --file ./env_build/dockerfiles/poetry_python_-_3-11_cuda12-1_cv-builds.dockerfile --tag poetry_python:3.11_cuda12.1_cudnn8_cv-builds .
+docker run \
+    --interactive \
+    --tty \
+    --detach \
+    --ipc=host \
+    --shm-size=4gb \
+    --gpus all \
+    --volume ${PWD%/*}:/v \
+    --name ai_dev_example \
+    poetry_python:3.11_cuda12.1_cudnn8_cv-builds \
+    bash
+docker exec -it -w /v/ai_python_dev_reference ai_dev_example bash
+```
+
+```sh
+# @ ai_dev_example::/v/ai_python_dev_reference
+mkdir ai_examples_cuda_12
+cd ai_examples_cuda_12
+poetry init \
+    --name "ai_examples" \
+    --description "AI model example code for training and quantization, as well as converting, pytorch, onnx, tflite, and ai_edge_torch" \
+    --python "~3.11" \
+    --author "Elisa Aleman <elisa.claire.aleman.carreon@gmail.com>" \
+    --license "GPL-3.0-or-later" \
+    --no-interaction
+mkdir ai_examples
+touch ai_examples/__init__.py
+touch README.md
+
+poetry add torch==2.4.0 torchvision@* tensorflow-cpu@* onnx@* onnxruntime@* ai_edge_torch
+poetry install
+poetry shell
+
+# @ ai_dev_example::poetry_shell::/v/ai_python_dev_reference/ai_examples_cuda_12
+python
+```
+
+But it can also be run in a Google Colab notebook with the environment, with the caveat that it will run a specific python version (at the time of writing `3.10.12`), and has no dependency solver.
+
+```python
+!pip install torch==2.4.0 torchvision==0.19.0 tensorflow-cpu==2.17.0 onnx==1.16.2 onnxruntime==1.19.2 ai_edge_torch==0.2.0
+```
+
 ### Pytorch Quantization
 
 Sources:
