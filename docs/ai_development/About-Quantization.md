@@ -361,7 +361,11 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.30.4/cmake-3.30.4
 ENV PATH=/root/cmake/bin:$PATH
 
 CMD ["/bin/bash"]
+
 ```
+
+Then build and run the container:
+
 
 ```sh
 # @ shell(linux/mac_osx/wsl)
@@ -599,25 +603,19 @@ ExampleModel(
 
 example_inputs = (torch.randn(1,3,28,28),)
 
-pt2e_traced_model = torch.export(
+pt2e_traced_model = torch.export.export(
     model,
     example_inputs,
     ).module()
 
+
 print(pt2e_traced_model)
 '''
----------------------------------------------------------------------------
-TypeError                                 Traceback (most recent call last)
-<ipython-input-2-1ed0da7af0ff> in <cell line: 29>()
-     27 example_inputs = (torch.randn(1,3,28,28),)
-     28 
----> 29 pt2e_traced_model = torch.export(
-     30     model,
-     31     example_inputs,
 
-TypeError: 'module' object is not callable
 '''
 ```
+
+
 
 #### Quantization Configuration
 
