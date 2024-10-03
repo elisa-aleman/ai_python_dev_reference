@@ -383,7 +383,7 @@ docker run \
     --name ai_dev_example \
     poetry_python:3.11_cuda12.1_cudnn8_cv-builds \
     bash
-docker exec -it -w /v/ai_python_dev_reference ai_dev_example bash
+docker exec -it -w /v/ai_python_dev_reference/ai_dev_examples_cuda_12 ai_dev_example bash
 ```
 
 ```sh
@@ -611,11 +611,25 @@ pt2e_traced_model = torch.export.export(
 
 print(pt2e_traced_model)
 '''
+GraphModule(
+  (conv): Module()
+)
 
+
+
+def forward(self, x):
+    x, = fx_pytree.tree_flatten_spec(([x], {}), self._in_spec)
+    conv_weight = self.conv.weight
+    conv_bias = self.conv.bias
+    conv2d = torch.ops.aten.conv2d.default(x, conv_weight, conv_bias);  x = conv_weight = conv_bias = None
+    adaptive_max_pool2d = torch.ops.aten.adaptive_max_pool2d.default(conv2d, [1, 1]);  conv2d = None
+    getitem = adaptive_max_pool2d[0];  adaptive_max_pool2d = None
+    argmax = torch.ops.aten.argmax.default(getitem, 1);  getitem = None
+    return pytree.tree_unflatten((argmax,), self._out_spec)
+
+# To see more debug info, please use `graph_module.print_readable()`
 '''
 ```
-
-
 
 #### Quantization Configuration
 
@@ -1482,13 +1496,204 @@ Currently, there are only a few backends prepared for this without adding a cust
 
 - [EmbeddingQuantizer](https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/quantizer/embedding_quantizer.py)
 - [X86InductorQuantizer](https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/quantizer/x86_inductor_quantizer.py)
-- [XNNPackQuantizer](https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/quantizer/xnnpack_quantizer.py)
+- [XNNPACKQuantizer](https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/quantizer/xnnpack_quantizer.py)
 
 There's also third party quantizers, such as the one for [`ai_edge_torch`](https://github.com/google-ai-edge/ai-edge-torch) used for exporting torch models to TFLite.
 
 - [`ai_edge_torch.quantize.pt2e_quantizer.PT2E_Quantizer`](https://github.com/google-ai-edge/ai-edge-torch/blob/v0.2.0/ai_edge_torch/quantize/pt2e_quantizer.py#L243)
 
-As 
+As it is difficult to make a quantizer class from scratch at this point, I will show an example with one of the provided classes.
+
+```python
+import torch
+# quantizer class
+from torch.ao.quantization.quantizer.xnnpack_quantizer import XNNPACKQuantizer
+
+# config class to set up the quantizer
+# the placing of the module is strange, but this class is used for other quantizers as well.
+from torch.ao.quantization.quantizer.xnnpack_quantizer_utils import QuantizationConfig
+
+# individual settings for each type of tensor use this class for config
+from torch.ao.quantization.quantizer import QuantizationSpec
+
+# observer class
+from torch.ao.quantization.observer import MovingAverageMinMaxObserver
+
+# fake quant class
+from torch.ao.quantization.fake_quantize import FusedMovingAvgObsFakeQuantize
+
+# pt2e insert observers in traced module
+from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+
+input_output_spec = QuantizationSpec(
+        dtype=torch.int8,
+        quant_min=-128,
+        quant_max=127,
+        qscheme=torch.per_tensor_affine,
+        is_dynamic=False,
+        observer_or_fake_quant_ctr=FusedMovingAvgObsFakeQuantize.with_args(),
+    )
+weight_spec = QuantizationSpec(
+        dtype=torch.int8,
+        quant_min=-128,
+        quant_max=127,
+        qscheme=torch.per_tensor_symmetric,
+        is_dynamic=False,
+        observer_or_fake_quant_ctr=FusedMovingAvgObsFakeQuantize.with_args(
+                observer=MovingAverageMinMaxObserver,
+            ),
+    )
+bias_spec = None
+quantization_config = QuantizationConfig(
+        input_output_spec,
+        input_output_spec,
+        weight_spec,
+        bias_spec,
+        is_qat=True,
+    )
+quantizer = XNNPACKQuantizer().set_global(quantization_config)
+
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,3,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3,10,1,1)
+        self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
+        # self.pool = torch.nn.MaxPool2d(28,28)
+    def forward(self,x):
+        x = self.conv(x)
+        x = self.pool(x)
+        x = torch.argmax(x,dim=1)
+        return x
+
+model = ExampleModel()
+print(model)
+'''
+ExampleModel(
+  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
+  (pool): AdaptiveMaxPool2d(output_size=(1, 1))
+)
+'''
+
+example_inputs = (torch.randn(1,3,28,28),)
+
+pt2e_traced_model = torch.export.export(
+    model,
+    example_inputs,
+    ).module()
+
+
+print(pt2e_traced_model)
+'''
+GraphModule(
+  (conv): Module()
+)
+
+
+
+def forward(self, x):
+    x, = fx_pytree.tree_flatten_spec(([x], {}), self._in_spec)
+    conv_weight = self.conv.weight
+    conv_bias = self.conv.bias
+    conv2d = torch.ops.aten.conv2d.default(x, conv_weight, conv_bias);  x = conv_weight = conv_bias = None
+    adaptive_max_pool2d = torch.ops.aten.adaptive_max_pool2d.default(conv2d, [1, 1]);  conv2d = None
+    getitem = adaptive_max_pool2d[0];  adaptive_max_pool2d = None
+    argmax = torch.ops.aten.argmax.default(getitem, 1);  getitem = None
+    return pytree.tree_unflatten((argmax,), self._out_spec)
+
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
+pt2e_prepared_model = prepare_pt2e(pt2e_traced_model, quantizer)
+
+print(pt2e_prepared_model)
+'''
+GraphModule(
+  (conv): Module()
+  (activation_post_process_1): FusedMovingAvgObsFakeQuantize(
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([1.]), zero_point=tensor([0], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_symmetric, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (activation_post_process_0): FusedMovingAvgObsFakeQuantize(
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([1.]), zero_point=tensor([0], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (activation_post_process_2): FusedMovingAvgObsFakeQuantize(
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([1.]), zero_point=tensor([0], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+)
+
+
+
+def forward(self, x):
+    x, = fx_pytree.tree_flatten_spec(([x], {}), self._in_spec)
+    conv_weight = self.conv.weight
+    activation_post_process_1 = self.activation_post_process_1(conv_weight);  conv_weight = None
+    conv_bias = self.conv.bias
+    activation_post_process_0 = self.activation_post_process_0(x);  x = None
+    conv2d = torch.ops.aten.conv2d.default(activation_post_process_0, activation_post_process_1, conv_bias);  activation_post_process_0 = activation_post_process_1 = conv_bias = None
+    activation_post_process_2 = self.activation_post_process_2(conv2d);  conv2d = None
+    adaptive_max_pool2d = torch.ops.aten.adaptive_max_pool2d.default(activation_post_process_2, [1, 1]);  activation_post_process_2 = None
+    getitem = adaptive_max_pool2d[0];  adaptive_max_pool2d = None
+    argmax = torch.ops.aten.argmax.default(getitem, 1);  getitem = None
+    return pytree.tree_unflatten((argmax,), self._out_spec)
+
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
+from pprint import pprint
+pprint(pt2e_prepared_model.meta)
+'''
+{'_observed_graph_module_attrs': ObservedGraphModuleAttrs(node_name_to_qconfig={},
+                                                          node_name_to_scope={'adaptive_max_pool2d': ('pool',
+
+'torch.nn.modules.pooling.AdaptiveMaxPool2d'),
+                                                                              'argmax': ('',
+                                                                                         '__main__.ExampleModel'),
+                                                                              'conv2d': ('conv',
+                                                                                         'torch.nn.modules.conv.Conv2d'),
+                                                                              'conv_bias': ('',
+                                                                                            <class 'NoneType'>),
+                                                                              'conv_weight': ('',
+                                                                                              <class 'NoneType'>),
+                                                                              'getitem': ('pool',
+                                                                                          'torch.nn.modules.pooling.AdaptiveMaxPool2d'),
+                                                                              'output_1': ('',
+                                                                                           <class 'NoneType'>),
+                                                                              'x': ('',
+                                                                                    <class 'NoneType'>)},
+                                                          prepare_custom_config=PrepareCustomConfig({}),
+                                                          equalization_node_name_to_qconfig={},
+                                                          qconfig_mapping=QConfigMapping (
+ global_qconfig
+  None
+ object_type_qconfigs
+  OrderedDict()
+ module_name_regex_qconfigs
+  OrderedDict()
+ module_name_qconfigs
+  OrderedDict()
+ module_name_object_type_order_qconfigs
+  OrderedDict()
+),
+                                                          is_qat=False,
+                                                          observed_node_names=set(),
+                                                          is_observed_standalone_module=False,
+                                                          standalone_module_input_quantized_idxs=None,
+                                                          standalone_module_output_quantized_idxs=None),
+ 'dynamo_flat_name_to_original_fqn': {'L__self___conv_bias': 'conv.bias',
+                                      'L__self___conv_weight': 'conv.weight'},
+ 'forward_arg_names': ['x'],
+ 'inline_constraints': {},
+ 'input_shape_constraints': [],
+ 'module_call_specs': {}}
+'''
+```
+
+As we can see, the inserted nodes are not lowered to aten operations just yet, since they still could be used for QAT training (which need modules). Then, the data indicating which nodes were annotated for quantization and how are saved in the meta attribute as a dictionary.
 
 ##### Custom FX BackendConfigs based on PT2E code
 
