@@ -13,6 +13,8 @@ Sources:
 TODO:
 - [ ] Add style guide for location comments
 - [ ] ReLU merge and split share qparams on PT2E
+- [ ] fx config redo with newer example model structure
+- [ ] clarify how dynamic qat works
 
 ## Definition
 
