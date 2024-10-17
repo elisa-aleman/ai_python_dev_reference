@@ -476,16 +476,12 @@ import torch
 
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(3,32,1,1)
-        self.bn1 = torch.nn.BatchNorm2d(32)
-        self.conv2 = torch.nn.Conv2d(32,64,1,1)
-        self.bn2 = torch.nn.BatchNorm2d(64)
-        self.conv3 = torch.nn.Conv2d(64,10,1,1)
-        self.bn3 = torch.nn.BatchNorm2d(10)
+        self.conv1 = torch.nn.Conv2d(1,10,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(10)
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
@@ -494,25 +490,16 @@ class ExampleModel(torch.nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = torch.nn.functional.relu(x)
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = torch.nn.functional.relu(x)
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = torch.nn.functional.relu(x)
         x = self.pool(x)
         x = torch.squeeze(x, dim=2)
         x = torch.squeeze(x, dim=2)
         x = self.fc(x)
-        x = torch.nn.functional.relu(x)
-        x = torch.softmax(x,dim=1)
-        x = torch.unsqueeze(x, dim=2)
         return x
 
-my_model = ExampleModel()
+model = ExampleModel()
 ```
 
-\**Note: The example models in this guide are extremely simple and will not have good results, but are used just for showing a functioning program.*
+\**Note: The example models in this guide are extremely simple and will not guarantee good results, but are used just for showing a functioning program.*
 
 To quantize a model in this mode without altering its inherent structure is impossible, since the definitions strictly only include floating point operations. It is because of this that a considerable amount of refactoring is necessary.
 
@@ -535,16 +522,12 @@ from torch.fx import GraphModule
 
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(3,32,1,1)
-        self.bn1 = torch.nn.BatchNorm2d(32)
-        self.conv2 = torch.nn.Conv2d(32,64,1,1)
-        self.bn2 = torch.nn.BatchNorm2d(64)
-        self.conv3 = torch.nn.Conv2d(64,10,1,1)
-        self.bn3 = torch.nn.BatchNorm2d(10)
+        self.conv1 = torch.nn.Conv2d(1,10,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(10)
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
@@ -553,31 +536,18 @@ class ExampleModel(torch.nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = torch.nn.functional.relu(x)
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = torch.nn.functional.relu(x)
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = torch.nn.functional.relu(x)
         x = self.pool(x)
         x = torch.squeeze(x, dim=2)
         x = torch.squeeze(x, dim=2)
         x = self.fc(x)
-        x = torch.nn.functional.relu(x)
-        x = torch.softmax(x,dim=1)
-        x = torch.unsqueeze(x, dim=2)
         return x
 
 model = ExampleModel()
 print(model)
 '''
 ExampleModel(
-  (conv1): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
-  (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (conv3): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-  (bn3): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (conv1): Conv2d(1, 10, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
   (fc): Linear(in_features=10, out_features=10, bias=True)
 )
@@ -590,12 +560,8 @@ traced_fx = GraphModule(tracer.root, graph, 'ExampleModel')
 print(traced_fx)
 '''
 ExampleModel(
-  (conv1): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
-  (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (conv3): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-  (bn3): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (conv1): Conv2d(1, 10, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
   (fc): Linear(in_features=10, out_features=10, bias=True)
 )
@@ -606,20 +572,11 @@ def forward(self, x):
     conv1 = self.conv1(x);  x = None
     bn1 = self.bn1(conv1);  conv1 = None
     relu = torch.nn.functional.relu(bn1, inplace = False);  bn1 = None
-    conv2 = self.conv2(relu);  relu = None
-    bn2 = self.bn2(conv2);  conv2 = None
-    relu_1 = torch.nn.functional.relu(bn2, inplace = False);  bn2 = None
-    conv3 = self.conv3(relu_1);  relu_1 = None
-    bn3 = self.bn3(conv3);  conv3 = None
-    relu_2 = torch.nn.functional.relu(bn3, inplace = False);  bn3 = None
-    pool = self.pool(relu_2);  relu_2 = None
+    pool = self.pool(relu);  relu = None
     squeeze = torch.squeeze(pool, dim = 2);  pool = None
     squeeze_1 = torch.squeeze(squeeze, dim = 2);  squeeze = None
     fc = self.fc(squeeze_1);  squeeze_1 = None
-    relu_3 = torch.nn.functional.relu(fc, inplace = False);  fc = None
-    softmax = torch.softmax(relu_3, dim = 1);  relu_3 = None
-    unsqueeze = torch.unsqueeze(softmax, dim = 2);  softmax = None
-    return unsqueeze
+    return fc
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
@@ -631,20 +588,11 @@ graph():
     %conv1 : [num_users=1] = call_module[target=conv1](args = (%x,), kwargs = {})
     %bn1 : [num_users=1] = call_module[target=bn1](args = (%conv1,), kwargs = {})
     %relu : [num_users=1] = call_function[target=torch.nn.functional.relu](args = (%bn1,), kwargs = {inplace: False})
-    %conv2 : [num_users=1] = call_module[target=conv2](args = (%relu,), kwargs = {})
-    %bn2 : [num_users=1] = call_module[target=bn2](args = (%conv2,), kwargs = {})
-    %relu_1 : [num_users=1] = call_function[target=torch.nn.functional.relu](args = (%bn2,), kwargs = {inplace: False})
-    %conv3 : [num_users=1] = call_module[target=conv3](args = (%relu_1,), kwargs = {})
-    %bn3 : [num_users=1] = call_module[target=bn3](args = (%conv3,), kwargs = {})
-    %relu_2 : [num_users=1] = call_function[target=torch.nn.functional.relu](args = (%bn3,), kwargs = {inplace: False})
-    %pool : [num_users=1] = call_module[target=pool](args = (%relu_2,), kwargs = {})
+    %pool : [num_users=1] = call_module[target=pool](args = (%relu,), kwargs = {})
     %squeeze : [num_users=1] = call_function[target=torch.squeeze](args = (%pool,), kwargs = {dim: 2})
     %squeeze_1 : [num_users=1] = call_function[target=torch.squeeze](args = (%squeeze,), kwargs = {dim: 2})
     %fc : [num_users=1] = call_module[target=fc](args = (%squeeze_1,), kwargs = {})
-    %relu_3 : [num_users=1] = call_function[target=torch.nn.functional.relu](args = (%fc,), kwargs = {inplace: False})
-    %softmax : [num_users=1] = call_function[target=torch.softmax](args = (%relu_3,), kwargs = {dim: 1})
-    %unsqueeze : [num_users=1] = call_function[target=torch.unsqueeze](args = (%softmax,), kwargs = {dim: 2})
-    return unsqueeze
+    return fc
 '''
 ```
 
@@ -677,16 +625,12 @@ import torch
 
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(3,32,1,1)
-        self.bn1 = torch.nn.BatchNorm2d(32)
-        self.conv2 = torch.nn.Conv2d(32,64,1,1)
-        self.bn2 = torch.nn.BatchNorm2d(64)
-        self.conv3 = torch.nn.Conv2d(64,10,1,1)
-        self.bn3 = torch.nn.BatchNorm2d(10)
+        self.conv1 = torch.nn.Conv2d(1,10,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(10)
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
@@ -695,37 +639,24 @@ class ExampleModel(torch.nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = torch.nn.functional.relu(x)
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = torch.nn.functional.relu(x)
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = torch.nn.functional.relu(x)
         x = self.pool(x)
         x = torch.squeeze(x, dim=2)
         x = torch.squeeze(x, dim=2)
         x = self.fc(x)
-        x = torch.nn.functional.relu(x)
-        x = torch.softmax(x,dim=1)
-        x = torch.unsqueeze(x, dim=2)
         return x
 
 model = ExampleModel()
 print(model)
 '''
 ExampleModel(
-  (conv1): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
-  (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (conv3): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-  (bn3): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (conv1): Conv2d(1, 10, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
   (fc): Linear(in_features=10, out_features=10, bias=True)
 )
 '''
 
-example_inputs = (torch.randn(1,3,28,28),)
+example_inputs = (torch.randn(1,1,28,28),)
 
 pt2e_traced_model = torch.export.export(
     model.eval(),
@@ -737,10 +668,6 @@ print(pt2e_traced_model)
 GraphModule(
   (conv1): Module()
   (bn1): Module()
-  (conv2): Module()
-  (bn2): Module()
-  (conv3): Module()
-  (bn3): Module()
   (fc): Module()
 )
 
@@ -752,42 +679,19 @@ def forward(self, x):
     conv1_bias = self.conv1.bias
     bn1_weight = self.bn1.weight
     bn1_bias = self.bn1.bias
-    conv2_weight = self.conv2.weight
-    conv2_bias = self.conv2.bias
-    bn2_weight = self.bn2.weight
-    bn2_bias = self.bn2.bias
-    conv3_weight = self.conv3.weight
-    conv3_bias = self.conv3.bias
-    bn3_weight = self.bn3.weight
-    bn3_bias = self.bn3.bias
     fc_weight = self.fc.weight
     fc_bias = self.fc.bias
     bn1_running_mean = self.bn1.running_mean
     bn1_running_var = self.bn1.running_var
-    bn2_running_mean = self.bn2.running_mean
-    bn2_running_var = self.bn2.running_var
-    bn3_running_mean = self.bn3.running_mean
-    bn3_running_var = self.bn3.running_var
     conv2d = torch.ops.aten.conv2d.default(x, conv1_weight, conv1_bias);  x = conv1_weight = conv1_bias = None
     _native_batch_norm_legit_no_training = torch.ops.aten._native_batch_norm_legit_no_training.default(conv2d, bn1_weight, bn1_bias, bn1_running_mean, bn1_running_var, 0.1, 1e-05);  conv2d = bn1_weight = bn1_bias = bn1_running_mean = bn1_running_var = None
     getitem = _native_batch_norm_legit_no_training[0];  _native_batch_norm_legit_no_training = None
     relu = torch.ops.aten.relu.default(getitem);  getitem = None
-    conv2d_1 = torch.ops.aten.conv2d.default(relu, conv2_weight, conv2_bias);  relu = conv2_weight = conv2_bias = None
-    _native_batch_norm_legit_no_training_1 = torch.ops.aten._native_batch_norm_legit_no_training.default(conv2d_1, bn2_weight, bn2_bias, bn2_running_mean, bn2_running_var, 0.1, 1e-05);  conv2d_1 = bn2_weight = bn2_bias = bn2_running_mean = bn2_running_var = None
-    getitem_3 = _native_batch_norm_legit_no_training_1[0];  _native_batch_norm_legit_no_training_1 = None
-    relu_1 = torch.ops.aten.relu.default(getitem_3);  getitem_3 = None
-    conv2d_2 = torch.ops.aten.conv2d.default(relu_1, conv3_weight, conv3_bias);  relu_1 = conv3_weight = conv3_bias = None
-    _native_batch_norm_legit_no_training_2 = torch.ops.aten._native_batch_norm_legit_no_training.default(conv2d_2, bn3_weight, bn3_bias, bn3_running_mean, bn3_running_var, 0.1, 1e-05);  conv2d_2 = bn3_weight = bn3_bias = bn3_running_mean = bn3_running_var = None
-    getitem_6 = _native_batch_norm_legit_no_training_2[0];  _native_batch_norm_legit_no_training_2 = None
-    relu_2 = torch.ops.aten.relu.default(getitem_6);  getitem_6 = None
-    max_pool2d = torch.ops.aten.max_pool2d.default(relu_2, [28, 28], [28, 28]);  relu_2 = None
+    max_pool2d = torch.ops.aten.max_pool2d.default(relu, [28, 28], [28, 28]);  relu = None
     squeeze = torch.ops.aten.squeeze.dim(max_pool2d, 2);  max_pool2d = None
     squeeze_1 = torch.ops.aten.squeeze.dim(squeeze, 2);  squeeze = None
     linear = torch.ops.aten.linear.default(squeeze_1, fc_weight, fc_bias);  squeeze_1 = fc_weight = fc_bias = None
-    relu_3 = torch.ops.aten.relu.default(linear);  linear = None
-    softmax = torch.ops.aten.softmax.int(relu_3, 1);  relu_3 = None
-    unsqueeze = torch.ops.aten.unsqueeze.default(softmax, 2);  softmax = None
-    return pytree.tree_unflatten((unsqueeze,), self._out_spec)
+    return pytree.tree_unflatten((linear,), self._out_spec)
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
@@ -877,31 +781,24 @@ from torch.ao.quantization.observer import MovingAverageMinMaxObserver, MovingAv
 
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(3,32,1,1)
-        self.conv2 = torch.nn.Conv2d(32,64,1,1)
-        self.conv3 = torch.nn.Conv2d(64,10,1,1)
+        self.conv1 = torch.nn.Conv2d(1,10,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(10)
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
         self.fc = torch.nn.Linear(10, 10)
     def forward(self,x):
         x = self.conv1(x)
-        x = torch.nn.functional.relu(x)
-        x = self.conv2(x)
-        x = torch.nn.functional.relu(x)
-        x = self.conv3(x)
+        x = self.bn1(x)
         x = torch.nn.functional.relu(x)
         x = self.pool(x)
         x = torch.squeeze(x, dim=2)
         x = torch.squeeze(x, dim=2)
         x = self.fc(x)
-        x = torch.nn.functional.relu(x)
-        x = torch.softmax(x,dim=1)
-        x = torch.unsqueeze(x, dim=2)
         return x
 
 model = ExampleModel()
@@ -919,9 +816,8 @@ model.qconfig = QConfig(
 print(model)
 '''
 ExampleModel(
-  (conv1): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
-  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-  (conv3): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
+  (conv1): Conv2d(1, 10, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
   (fc): Linear(in_features=10, out_features=10, bias=True)
 )
@@ -932,15 +828,11 @@ print(model)
 '''
 ExampleModel(
   (conv1): Conv2d(
-    3, 32, kernel_size=(1, 1), stride=(1, 1)
+    1, 10, kernel_size=(1, 1), stride=(1, 1)
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
-  (conv2): Conv2d(
-    32, 64, kernel_size=(1, 1), stride=(1, 1)
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  )
-  (conv3): Conv2d(
-    64, 10, kernel_size=(1, 1), stride=(1, 1)
+  (bn1): BatchNorm2d(
+    10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
@@ -983,45 +875,33 @@ import torch
 
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
         self.quant = torch.ao.quantization.QuantStub()
         self.dequant = torch.ao.quantization.DeQuantStub()
-        self.conv1 = torch.nn.Conv2d(3,32,1,1)
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
         self.bn1 = torch.nn.BatchNorm2d(32)
         self.act1 = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv2d(32,64,1,1)
-        self.bn2 = torch.nn.BatchNorm2d(64)
-        self.act2 = torch.nn.ReLU()
-        self.conv3 = torch.nn.Conv2d(64,10,1,1)
-        self.bn3 = torch.nn.BatchNorm2d(10)
-        self.act3 = torch.nn.ReLU()
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
-        self.fc = torch.nn.Linear(10, 10)
-        self.fcact = torch.nn.ReLU()
+        self.fc1 = torch.nn.Linear(10, 128)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(128, 10)
     def forward(self,x):
         x = self.quant(x)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.act1(x)
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = self.act2(x)
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = self.act3(x)
         x = self.pool(x)
         x = torch.squeeze(x, dim=2)
         x = torch.squeeze(x, dim=2)
-        x = self.fc(x)
-        x = self.fcact(x)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
         x = self.dequant(x)
-        x = torch.softmax(x,dim=1)
-        x = torch.unsqueeze(x, dim=2)
         return x
 ```
 
@@ -1033,38 +913,33 @@ import torch
 # PTQ
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
         self.quant = torch.ao.quantization.QuantStub()
         self.dequant = torch.ao.quantization.DeQuantStub()
-        self.conv1 = torch.nn.Conv2d(3,32,1,1)
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
         self.bn1 = torch.nn.BatchNorm2d(32)
         self.act1 = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv2d(32,64,1,1)
-        self.bn2 = torch.nn.BatchNorm2d(64)
-        self.act2 = torch.nn.ReLU()
-        self.conv3 = torch.nn.Conv2d(64,10,1,1)
-        self.bn3 = torch.nn.BatchNorm2d(10)
-        self.act3 = torch.nn.ReLU()
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
-        self.fc = torch.nn.Linear(10, 10)
-        self.fcact = torch.nn.ReLU()
+        self.fc1 = torch.nn.Linear(10, 128)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(128, 10)
     def forward(self,x):
         x = self.quant(x)
         x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
+        x = self.bn1(x)
+        x = self.act1(x)
         x = self.pool(x)
         x = torch.squeeze(x, dim=2)
         x = torch.squeeze(x, dim=2)
-        x = self.fc(x)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
         x = self.dequant(x)
-        x = torch.softmax(x,dim=1)
-        x = torch.unsqueeze(x, dim=2)
         return x
     def fuse_model(self):
         torch.ao.quantization.fuse_modules(
@@ -1074,19 +949,10 @@ class ExampleModel(torch.nn.Module):
             )
         torch.ao.quantization.fuse_modules(
             self,
-            ['conv2','bn2','act2'],
+            ['fc1','fc1act'],
             inplace=True,
             )
-        torch.ao.quantization.fuse_modules(
-            self,
-            ['conv3','bn3','act3'],
-            inplace=True,
-            )
-        torch.ao.quantization.fuse_modules(
-            self,
-            ['fc','fcact'],
-            inplace=True,
-            )
+        
 
 qconfig = QConfig(
     activation=MovingAverageMinMaxObserver.with_args(
@@ -1106,18 +972,13 @@ print(model)
 ExampleModel(
   (quant): QuantStub()
   (dequant): DeQuantStub()
-  (conv1): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
   (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
   (act1): ReLU()
-  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (act2): ReLU()
-  (conv3): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-  (bn3): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (act3): ReLU()
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): Linear(in_features=10, out_features=10, bias=True)
-  (fcact): ReLU()
+  (fc1): Linear(in_features=10, out_features=128, bias=True)
+  (fc1act): ReLU()
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
 )
 '''
 
@@ -1130,29 +991,18 @@ ExampleModel(
   (quant): QuantStub()
   (dequant): DeQuantStub()
   (conv1): ConvReLU2d(
-    (0): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
     (1): ReLU()
   )
   (bn1): Identity()
   (act1): Identity()
-  (conv2): ConvReLU2d(
-    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-    (1): ReLU()
-  )
-  (bn2): Identity()
-  (act2): Identity()
-  (conv3): ConvReLU2d(
-    (0): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-    (1): ReLU()
-  )
-  (bn3): Identity()
-  (act3): Identity()
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): LinearReLU(
-    (0): Linear(in_features=10, out_features=10, bias=True)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=10, out_features=128, bias=True)
     (1): ReLU()
   )
-  (fcact): Identity()
+  (fc1act): Identity()
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
 )
 '''
 
@@ -1168,33 +1018,23 @@ ExampleModel(
   )
   (dequant): DeQuantStub()
   (conv1): ConvReLU2d(
-    (0): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
     (1): ReLU()
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
   (bn1): Identity()
   (act1): Identity()
-  (conv2): ConvReLU2d(
-    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-    (1): ReLU()
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  )
-  (bn2): Identity()
-  (act2): Identity()
-  (conv3): ConvReLU2d(
-    (0): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-    (1): ReLU()
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  )
-  (bn3): Identity()
-  (act3): Identity()
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): LinearReLU(
-    (0): Linear(in_features=10, out_features=10, bias=True)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=10, out_features=128, bias=True)
     (1): ReLU()
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
-  (fcact): Identity()
+  (fc1act): Identity()
+  (fc2): Linear(
+    in_features=128, out_features=10, bias=True
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
 )
 '''
 
@@ -1209,38 +1049,33 @@ from torch.ao.quantization.observer import MovingAverageMinMaxObserver, MovingAv
 # QAT
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
         self.quant = torch.ao.quantization.QuantStub()
         self.dequant = torch.ao.quantization.DeQuantStub()
-        self.conv1 = torch.nn.Conv2d(3,32,1,1)
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
         self.bn1 = torch.nn.BatchNorm2d(32)
         self.act1 = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv2d(32,64,1,1)
-        self.bn2 = torch.nn.BatchNorm2d(64)
-        self.act2 = torch.nn.ReLU()
-        self.conv3 = torch.nn.Conv2d(64,10,1,1)
-        self.bn3 = torch.nn.BatchNorm2d(10)
-        self.act3 = torch.nn.ReLU()
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
-        self.fc = torch.nn.Linear(10, 10)
-        self.fcact = torch.nn.ReLU()
+        self.fc1 = torch.nn.Linear(10, 128)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(128, 10)
     def forward(self,x):
         x = self.quant(x)
         x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
+        x = self.bn1(x)
+        x = self.act1(x)
         x = self.pool(x)
         x = torch.squeeze(x, dim=2)
         x = torch.squeeze(x, dim=2)
-        x = self.fc(x)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
         x = self.dequant(x)
-        x = torch.softmax(x,dim=1)
-        x = torch.unsqueeze(x, dim=2)
         return x
     def fuse_model(self):
         torch.ao.quantization.fuse_modules_qat(
@@ -1250,17 +1085,7 @@ class ExampleModel(torch.nn.Module):
             )
         torch.ao.quantization.fuse_modules_qat(
             self,
-            ['conv2','bn2','act2'],
-            inplace=True,
-            )
-        torch.ao.quantization.fuse_modules_qat(
-            self,
-            ['conv3','bn3','act3'],
-            inplace=True,
-            )
-        torch.ao.quantization.fuse_modules_qat(
-            self,
-            ['fc','fcact'],
+            ['fc1','fc1act'],
             inplace=True,
             )
 
@@ -1283,18 +1108,13 @@ print(model)
 ExampleModel(
   (quant): QuantStub()
   (dequant): DeQuantStub()
-  (conv1): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
   (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
   (act1): ReLU()
-  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (act2): ReLU()
-  (conv3): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-  (bn3): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (act3): ReLU()
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): Linear(in_features=10, out_features=10, bias=True)
-  (fcact): ReLU()
+  (fc1): Linear(in_features=10, out_features=128, bias=True)
+  (fc1act): ReLU()
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
 )
 '''
 
@@ -1307,32 +1127,19 @@ ExampleModel(
   (quant): QuantStub()
   (dequant): DeQuantStub()
   (conv1): ConvBnReLU2d(
-    (0): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
     (1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
     (2): ReLU()
   )
   (bn1): Identity()
   (act1): Identity()
-  (conv2): ConvBnReLU2d(
-    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-    (1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (2): ReLU()
-  )
-  (bn2): Identity()
-  (act2): Identity()
-  (conv3): ConvBnReLU2d(
-    (0): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-    (1): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (2): ReLU()
-  )
-  (bn3): Identity()
-  (act3): Identity()
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): LinearReLU(
-    (0): Linear(in_features=10, out_features=10, bias=True)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=10, out_features=128, bias=True)
     (1): ReLU()
   )
-  (fcact): Identity()
+  (fc1act): Identity()
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
 )
 '''
 
@@ -1349,36 +1156,25 @@ ExampleModel(
   )
   (dequant): DeQuantStub()
   (conv1): ConvBnReLU2d(
-    3, 32, kernel_size=(1, 1), stride=(1, 1)
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
     (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
   (bn1): Identity()
   (act1): Identity()
-  (conv2): ConvBnReLU2d(
-    32, 64, kernel_size=(1, 1), stride=(1, 1)
-    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  )
-  (bn2): Identity()
-  (act2): Identity()
-  (conv3): ConvBnReLU2d(
-    64, 10, kernel_size=(1, 1), stride=(1, 1)
-    (bn): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  )
-  (bn3): Identity()
-  (act3): Identity()
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): LinearReLU(
-    in_features=10, out_features=10, bias=True
+  (fc1): LinearReLU(
+    in_features=10, out_features=128, bias=True
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
-  (fcact): Identity()
+  (fc1act): Identity()
+  (fc2): Linear(
+    in_features=128, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
 )
 '''
 
@@ -1391,6 +1187,11 @@ Note that the refactoring being different introduces difficulties that aren't pr
 
 
 ##### FX Mode Quantization Configuration
+
+###### FX Mode Fused Modules
+
+TODO: 
+- [ ] Add note about `_fuse_fx()` being useful for qat settings to fuse non-Sequence nodes even for ptq
 
 ###### FX Mode QConfigMapping
 
@@ -1406,11 +1207,6 @@ QConfigMapping is the solution that FX mode quantization brought to the complexi
 
 For the full usage guide, I recommend reading the [Pytorch API docs: QConfigMapping](https://pytorch.org/docs/stable/generated/torch.ao.quantization.qconfig_mapping.QConfigMapping.html), but below I only show an example using global configurations.
 
-TODO
-------------
-- [ ] Check why softmax gets observer
-
-
 ```python
 import torch
 from torch.ao.quantization.qconfig_mapping import QConfigMapping
@@ -1418,47 +1214,35 @@ from torch.ao.quantization.qconfig import QConfig
 from torch.ao.quantization.observer import MovingAverageMinMaxObserver, MovingAveragePerChannelMinMaxObserver
 from torch.ao.quantization.fx.tracer import QuantizationTracer
 from torch.fx import GraphModule
-from torch.ao.quantization.quantize_fx import _fuse_fx
+from torch.ao.quantization.quantize_fx import _fuse_fx, convert_fx
 from torch.ao.quantization.fx import prepare
 
 
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(3,32,1,1)
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
         self.bn1 = torch.nn.BatchNorm2d(32)
         self.act1 = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv2d(32,64,1,1)
-        self.bn2 = torch.nn.BatchNorm2d(64)
-        self.act2 = torch.nn.ReLU()
-        self.conv3 = torch.nn.Conv2d(64,10,1,1)
-        self.bn3 = torch.nn.BatchNorm2d(10)
-        self.act3 = torch.nn.ReLU()
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
-        self.fc = torch.nn.Linear(10, 10)
-        self.fcact = torch.nn.ReLU()
+        self.fc1 = torch.nn.Linear(10, 20)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(20, 10)
     def forward(self,x):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.act1(x)
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = self.act2(x)
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = self.act3(x)
         x = self.pool(x)
         x = torch.squeeze(x, dim=2)
         x = torch.squeeze(x, dim=2)
-        x = self.fc(x)
-        x = self.fcact(x)
-        x = torch.softmax(x,dim=1)
-        x = torch.unsqueeze(x, dim=2)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
         return x
 
 model = ExampleModel()
@@ -1484,18 +1268,13 @@ traced_fx = GraphModule(tracer.root, graph, 'ExampleModel')
 print(traced_fx)
 '''
 ExampleModel(
-  (conv1): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
   (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
   (act1): ReLU()
-  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (act2): ReLU()
-  (conv3): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-  (bn3): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (act3): ReLU()
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): Linear(in_features=10, out_features=10, bias=True)
-  (fcact): ReLU()
+  (fc1): Linear(in_features=10, out_features=20, bias=True)
+  (fc1act): ReLU()
+  (fc2): Linear(in_features=20, out_features=10, bias=True)
 )
 
 
@@ -1504,20 +1283,13 @@ def forward(self, x):
     conv1 = self.conv1(x);  x = None
     bn1 = self.bn1(conv1);  conv1 = None
     act1 = self.act1(bn1);  bn1 = None
-    conv2 = self.conv2(act1);  act1 = None
-    bn2 = self.bn2(conv2);  conv2 = None
-    act2 = self.act2(bn2);  bn2 = None
-    conv3 = self.conv3(act2);  act2 = None
-    bn3 = self.bn3(conv3);  conv3 = None
-    act3 = self.act3(bn3);  bn3 = None
-    pool = self.pool(act3);  act3 = None
+    pool = self.pool(act1);  act1 = None
     squeeze = torch.squeeze(pool, dim = 2);  pool = None
     squeeze_1 = torch.squeeze(squeeze, dim = 2);  squeeze = None
-    fc = self.fc(squeeze_1);  squeeze_1 = None
-    fcact = self.fcact(fc);  fc = None
-    softmax = torch.softmax(fcact, dim = 1);  fcact = None
-    unsqueeze = torch.unsqueeze(softmax, dim = 2);  softmax = None
-    return unsqueeze
+    fc1 = self.fc1(squeeze_1);  squeeze_1 = None
+    fc1act = self.fc1act(fc1);  fc1 = None
+    fc2 = self.fc2(fc1act);  fc1act = None
+    return fc2
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
@@ -1532,47 +1304,35 @@ print(fused_fx)
 '''
 GraphModule(
   (conv1): ConvBnReLU2d(
-    (0): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1))
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
     (1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
     (2): ReLU()
   )
-  (conv2): ConvBnReLU2d(
-    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-    (1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (2): ReLU()
-  )
-  (conv3): ConvBnReLU2d(
-    (0): Conv2d(64, 10, kernel_size=(1, 1), stride=(1, 1))
-    (1): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (2): ReLU()
-  )
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): LinearReLU(
-    (0): Linear(in_features=10, out_features=10, bias=True)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=10, out_features=20, bias=True)
     (1): ReLU()
   )
+  (fc2): Linear(in_features=20, out_features=10, bias=True)
 )
 
 
 
 def forward(self, x):
     conv1 = self.conv1(x);  x = None
-    conv2 = self.conv2(conv1);  conv1 = None
-    conv3 = self.conv3(conv2);  conv2 = None
-    pool = self.pool(conv3);  conv3 = None
+    pool = self.pool(conv1);  conv1 = None
     squeeze = torch.squeeze(pool, dim = 2);  pool = None
     squeeze_1 = torch.squeeze(squeeze, dim = 2);  squeeze = None
-    fc = self.fc(squeeze_1);  squeeze_1 = None
-    softmax = torch.softmax(fc, dim = 1);  fc = None
-    unsqueeze = torch.unsqueeze(softmax, dim = 2);  softmax = None
-    return unsqueeze
+    fc1 = self.fc1(squeeze_1);  squeeze_1 = None
+    fc2 = self.fc2(fc1);  fc1 = None
+    return fc2
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
 
 
 # FX prepare the quantization nodes
-example_inputs = (torch.randn(1,3,28,28),)
+example_inputs = (torch.randn(1,1,28,28),)
 prepared_fx = prepare(
     fused_fx,
     qconfig_mapping=qconfig_mapping,
@@ -1581,39 +1341,46 @@ prepared_fx = prepare(
     example_inputs=example_inputs,
     backend_config=None, # default native
     )
+# Observe at least one input so observers aren't empty or inf
+prepared_fx(example_inputs[0])
 print(prepared_fx)
 '''
 GraphModule(
-  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=-3.5789921283721924, max_val=2.6757922172546387)
   (conv1): ConvBnReLU2d(
-    3, 32, kernel_size=(1, 1), stride=(1, 1)
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
     (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-0.9399,  0.0250,  0.6221,  0.0420,  0.3840,  0.8214,  0.9261,  0.4580,
+              -0.9189,  0.5860, -0.8352,  0.9982,  0.1032, -0.8320,  0.7838,  0.0279,
+               0.6654,  0.6904, -0.7964, -0.6220,  0.7120,  0.0911,  0.1661,  0.1380,
+               0.8009,  0.2910,  0.0789,  0.5088, -0.7149, -0.2357,  0.2789, -0.7154]), max_val=tensor([-0.9399,  0.0250,  0.6221,  0.0420,  0.3840,  0.8214,  0.9261,  0.4580,
+              -0.9189,  0.5860, -0.8352,  0.9982,  0.1032, -0.8320,  0.7838,  0.0279,
+               0.6654,  0.6904, -0.7964, -0.6220,  0.7120,  0.0911,  0.1661,  0.1380,
+               0.8009,  0.2910,  0.0789,  0.5088, -0.7149, -0.2357,  0.2789, -0.7154])
+    )
   )
-  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  (conv2): ConvBnReLU2d(
-    32, 64, kernel_size=(1, 1), stride=(1, 1)
-    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
-  )
-  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  (conv3): ConvBnReLU2d(
-    64, 10, kernel_size=(1, 1), stride=(1, 1)
-    (bn): BatchNorm2d(10, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
-  )
-  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=0.07630567997694016, max_val=3.6066136360168457)
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=0.07630567997694016, max_val=3.6066136360168457)
+  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=0.07630567997694016, max_val=3.6066136360168457)
+  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=0.07630567997694016, max_val=3.6066136360168457)
+  (fc1): LinearReLU(
+    in_features=10, out_features=20, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-0.2866, -0.2528, -0.2625, -0.2199, -0.3122, -0.1569, -0.3133, -0.1193,
+              -0.2822, -0.2716, -0.2971, -0.2418, -0.2501, -0.1576, -0.3001, -0.0644,
+              -0.2866, -0.2405, -0.1759, -0.2983]), max_val=tensor([ 0.2967,  0.2732,  0.3098,  0.2630,  0.2673,  0.2379,  0.2764,  0.2433,
+               0.2138,  0.2066,  0.2864,  0.3044, -0.0524,  0.3081,  0.3109,  0.3048,
+               0.2757,  0.2985,  0.2056,  0.1747])
+    )
+  )
   (activation_post_process_5): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  (fc): LinearReLU(
-    in_features=10, out_features=10, bias=True
+  (fc2): Linear(
+    in_features=20, out_features=10, bias=True
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
   )
-  (activation_post_process_7): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  (activation_post_process_8): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
-  (activation_post_process_9): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
 )
 
 
@@ -1622,32 +1389,28 @@ def forward(self, x):
     activation_post_process_0 = self.activation_post_process_0(x);  x = None
     conv1 = self.conv1(activation_post_process_0);  activation_post_process_0 = None
     activation_post_process_1 = self.activation_post_process_1(conv1);  conv1 = None
-    conv2 = self.conv2(activation_post_process_1);  activation_post_process_1 = None
-    activation_post_process_2 = self.activation_post_process_2(conv2);  conv2 = None
-    conv3 = self.conv3(activation_post_process_2);  activation_post_process_2 = None
-    activation_post_process_3 = self.activation_post_process_3(conv3);  conv3 = None
-    pool = self.pool(activation_post_process_3);  activation_post_process_3 = None
-    activation_post_process_4 = self.activation_post_process_4(pool);  pool = None
-    squeeze = torch.squeeze(activation_post_process_4, dim = 2);  activation_post_process_4 = None
-    activation_post_process_5 = self.activation_post_process_5(squeeze);  squeeze = None
-    squeeze_1 = torch.squeeze(activation_post_process_5, dim = 2);  activation_post_process_5 = None
-    activation_post_process_6 = self.activation_post_process_6(squeeze_1);  squeeze_1 = None
-    fc = self.fc(activation_post_process_6);  activation_post_process_6 = None
-    activation_post_process_7 = self.activation_post_process_7(fc);  fc = None
-    softmax = torch.softmax(activation_post_process_7, dim = 1);  activation_post_process_7 = None
-    activation_post_process_8 = self.activation_post_process_8(softmax);  softmax = None
-    unsqueeze = torch.unsqueeze(activation_post_process_8, dim = 2);  activation_post_process_8 = None
-    activation_post_process_9 = self.activation_post_process_9(unsqueeze);  unsqueeze = None
-    return activation_post_process_9
+    pool = self.pool(activation_post_process_1);  activation_post_process_1 = None
+    activation_post_process_2 = self.activation_post_process_2(pool);  pool = None
+    squeeze = torch.squeeze(activation_post_process_2, dim = 2);  activation_post_process_2 = None
+    activation_post_process_3 = self.activation_post_process_3(squeeze);  squeeze = None
+    squeeze_1 = torch.squeeze(activation_post_process_3, dim = 2);  activation_post_process_3 = None
+    activation_post_process_4 = self.activation_post_process_4(squeeze_1);  squeeze_1 = None
+    fc1 = self.fc1(activation_post_process_4);  activation_post_process_4 = None
+    activation_post_process_5 = self.activation_post_process_5(fc1);  fc1 = None
+    fc2 = self.fc2(activation_post_process_5);  activation_post_process_5 = None
+    activation_post_process_6 = self.activation_post_process_6(fc2);  fc2 = None
+    return activation_post_process_6
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
 
+# different from eager mode
 print(hasattr(prepared_fx, 'qconfig'))
 '''
 False
 '''
 
+# instead:
 print(hasattr(prepared_fx, 'meta'))
 '''
 True
@@ -1655,30 +1418,44 @@ True
 import pprint
 pprint.pprint(prepared_fx.meta)
 '''
-{'_observed_graph_module_attrs': ObservedGraphModuleAttrs(node_name_to_qconfig={'conv': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f2f40f2eca0>}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f2f40f2eca0>}),
+{'_observed_graph_module_attrs': ObservedGraphModuleAttrs(node_name_to_qconfig={'conv1': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f56c83e80e0>}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f56c83e80e0>}),
+                                                                                'fc1': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f56c83e8040>}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f56c83e8040>}),
+                                                                                'fc2': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f56c83c8040>}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f56c83c8040>}),
                                                                                 'output': None,
-                                                                                'pool': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f2f40f2eac0>}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f2f40f2eac0>}),
-                                                                                'softmax': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){}),
+                                                                                'pool': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f56c83e89a0>}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){'factory_kwargs': <function _add_module_to_qconfig_obs_ctr.<locals>.get_factory_kwargs_based_on_module_device at 0x7f56c83e89a0>}),
                                                                                 'squeeze': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){}),
+                                                                                'squeeze_1': QConfig(activation=functools.partial(<class 'torch.ao.quantization.observer.MovingAverageMinMaxObserver'>, dtype=torch.quint8, qscheme=torch.per_tensor_affine){}, weight=functools.partial(<class 'torch.ao.quantization.observer.MovingAveragePerChannelMinMaxObserver'>, dtype=torch.qint8, qscheme=torch.per_channel_symmetric){}),
                                                                                 'x': None},
-                                                          node_name_to_scope={'conv': ('conv',
-                                                                                       <class 'torch.nn.modules.conv.Conv2d'>),
+                                                          node_name_to_scope={'act1': ('act1',
+                                                                                       <class 'torch.nn.modules.activation.ReLU'>),
+                                                                              'bn1': ('bn1',
+                                                                                      <class 'torch.nn.modules.batchnorm.BatchNorm2d'>),
+                                                                              'conv1': ('conv1',
+                                                                                        <class 'torch.nn.modules.conv.Conv2d'>),
+                                                                              'fc1': ('fc1',
+                                                                                      <class 'torch.nn.modules.linear.Linear'>),
+                                                                              'fc1act': ('fc1act',
+                                                                                         <class 'torch.nn.modules.activation.ReLU'>),
+                                                                              'fc2': ('fc2',
+                                                                                      <class 'torch.nn.modules.linear.Linear'>),
                                                                               'output': ('',
                                                                                          None),
                                                                               'pool': ('pool',
                                                                                        <class 'torch.nn.modules.pooling.MaxPool2d'>),
-                                                                              'softmax': ('',
-                                                                                          None),
                                                                               'squeeze': ('',
                                                                                           None),
+                                                                              'squeeze_1': ('',
+                                                                                            None),
                                                                               'x': ('',
                                                                                     None)},
                                                           prepare_custom_config=PrepareCustomConfig({}),
-                                                          equalization_node_name_to_qconfig={'conv': None,
+                                                          equalization_node_name_to_qconfig={'conv1': None,
+                                                                                             'fc1': None,
+                                                                                             'fc2': None,
                                                                                              'output': None,
                                                                                              'pool': None,
-                                                                                             'softmax': None,
                                                                                              'squeeze': None,
+                                                                                             'squeeze_1': None,
                                                                                              'x': None},
                                                           qconfig_mapping=QConfigMapping (
  global_qconfig
@@ -1693,13 +1470,49 @@ pprint.pprint(prepared_fx.meta)
   OrderedDict()
 ),
                                                           is_qat=True,
-                                                          observed_node_names={'conv',
+                                                          observed_node_names={'conv1',
+                                                                               'fc1',
+                                                                               'fc2',
                                                                                'pool',
-                                                                               'squeeze'},
+                                                                               'squeeze',
+                                                                               'squeeze_1'},
                                                           is_observed_standalone_module=False,
                                                           standalone_module_input_quantized_idxs=None,
                                                           standalone_module_output_quantized_idxs=None)}
 '''
+
+quantized_fx = convert_fx(
+    prepared_fx,
+    qconfig_mapping=qconfig_mapping,
+    backend_config=None, # default native
+    )
+print(quantized_fx)
+'''
+GraphModule(
+  (conv1): QuantizedConvReLU2d(1, 32, kernel_size=(1, 1), stride=(1, 1), scale=0.014143582433462143, zero_point=0)
+  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (fc1): QuantizedLinearReLU(in_features=10, out_features=20, scale=1.0, zero_point=0, qscheme=torch.per_channel_affine)
+  (fc2): QuantizedLinear(in_features=20, out_features=10, scale=1.0, zero_point=0, qscheme=torch.per_channel_affine)
+)
+
+
+
+def forward(self, x):
+    conv1_input_scale_0 = self.conv1_input_scale_0
+    conv1_input_zero_point_0 = self.conv1_input_zero_point_0
+    quantize_per_tensor = torch.quantize_per_tensor(x, conv1_input_scale_0, conv1_input_zero_point_0, torch.quint8);  x = conv1_input_scale_0 = conv1_input_zero_point_0 = None
+    conv1 = self.conv1(quantize_per_tensor);  quantize_per_tensor = None
+    pool = self.pool(conv1);  conv1 = None
+    squeeze = torch.squeeze(pool, dim = 2);  pool = None
+    squeeze_1 = torch.squeeze(squeeze, dim = 2);  squeeze = None
+    fc1 = self.fc1(squeeze_1);  squeeze_1 = None
+    fc2 = self.fc2(fc1);  fc1 = None
+    dequantize_6 = fc2.dequantize();  fc2 = None
+    return dequantize_6
+
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
 ```
 
 As printed above, there are new fake_quantize/observer nodes added to the forward code and to the module as submodules, but the configuration is not saved in the `qconfig` attribute but instead in a `meta` dictionary that stores the configuration for all inserted nodes.
@@ -1789,8 +1602,8 @@ from torch.ao.quantization.observer import MovingAverageMinMaxObserver
 # fake quant class
 from torch.ao.quantization.fake_quantize import FusedMovingAvgObsFakeQuantize
 
-# pt2e insert observers in traced module
-from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+# pt2e insert observers in traced module, and quantize final model
+from torch.ao.quantization.quantize_pt2e import prepare_pt2e, convert_pt2e
 
 input_output_spec = QuantizationSpec(
         dtype=torch.int8,
@@ -1822,34 +1635,52 @@ quantizer = XNNPACKQuantizer().set_global(quantization_config)
 
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
-        self.conv = torch.nn.Conv2d(3,10,1,1)
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(32)
+        self.act1 = torch.nn.ReLU()
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
+        self.fc1 = torch.nn.Linear(10, 128)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(128, 10)
     def forward(self,x):
-        x = self.conv(x)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.act1(x)
         x = self.pool(x)
-        x = torch.squeeze(x, dim=(1,2))
-        x = torch.softmax(x,dim=1)
+        x = torch.squeeze(x, dim=2)
+        x = torch.squeeze(x, dim=2)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
         return x
 
 model = ExampleModel()
 print(model)
 '''
 ExampleModel(
-  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act1): ReLU()
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (fc1): Linear(in_features=10, out_features=128, bias=True)
+  (fc1act): ReLU()
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
 )
 '''
 
-example_inputs = (torch.randn(1,3,28,28),)
+example_inputs = (torch.randn(1,1,28,28),)
+
+# for pt2e ptq: model.eval()
+# for pt2e qat: model.train()
 
 pt2e_traced_model = torch.export.export(
-    model,
+    model.eval(),
     example_inputs,
     ).module()
 
@@ -1857,45 +1688,75 @@ pt2e_traced_model = torch.export.export(
 print(pt2e_traced_model)
 '''
 GraphModule(
-  (conv): Module()
+  (conv1): Module()
+  (bn1): Module()
+  (fc): Module()
 )
 
 
 
 def forward(self, x):
     x, = fx_pytree.tree_flatten_spec(([x], {}), self._in_spec)
-    conv_weight = self.conv.weight
-    conv_bias = self.conv.bias
-    conv2d = torch.ops.aten.conv2d.default(x, conv_weight, conv_bias);  x = conv_weight = conv_bias = None
-    max_pool2d = torch.ops.aten.max_pool2d.default(conv2d, [28, 28], [28, 28]);  conv2d = None
-    squeeze = torch.ops.aten.squeeze.dims(max_pool2d, [1, 2]);  max_pool2d = None
-    softmax = torch.ops.aten.softmax.int(squeeze, 1);  squeeze = None
-    return pytree.tree_unflatten((softmax,), self._out_spec)
+    conv1_weight = self.conv1.weight
+    conv1_bias = self.conv1.bias
+    bn1_weight = self.bn1.weight
+    bn1_bias = self.bn1.bias
+    fc_weight = self.fc.weight
+    fc_bias = self.fc.bias
+    bn1_running_mean = self.bn1.running_mean
+    bn1_running_var = self.bn1.running_var
+    conv2d = torch.ops.aten.conv2d.default(x, conv1_weight, conv1_bias);  x = conv1_weight = conv1_bias = None
+    _native_batch_norm_legit_no_training = torch.ops.aten._native_batch_norm_legit_no_training.default(conv2d, bn1_weight, bn1_bias, bn1_running_mean, bn1_running_var, 0.1, 1e-05);  conv2d = bn1_weight = bn1_bias = bn1_running_mean = bn1_running_var = None
+    getitem = _native_batch_norm_legit_no_training[0];  _native_batch_norm_legit_no_training = None
+    relu = torch.ops.aten.relu.default(getitem);  getitem = None
+    max_pool2d = torch.ops.aten.max_pool2d.default(relu, [28, 28], [28, 28]);  relu = None
+    squeeze = torch.ops.aten.squeeze.dim(max_pool2d, 2);  max_pool2d = None
+    squeeze_1 = torch.ops.aten.squeeze.dim(squeeze, 2);  squeeze = None
+    linear = torch.ops.aten.linear.default(squeeze_1, fc_weight, fc_bias);  squeeze_1 = fc_weight = fc_bias = None
+    return pytree.tree_unflatten((linear,), self._out_spec)
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
 
 pt2e_prepared_model = prepare_pt2e(pt2e_traced_model, quantizer)
-
+# Observe at least one input
+pt2e_prepared_model(example_inputs[0])
 print(pt2e_prepared_model)
 '''
 GraphModule(
-  (conv): Module()
+  (conv1): Module()
   (activation_post_process_1): FusedMovingAvgObsFakeQuantize(
-    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([1.]), zero_point=tensor([0], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_symmetric, reduce_range=False
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([0.0072]), zero_point=tensor([0], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_symmetric, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=-0.5439894199371338, max_val=0.9105219841003418)
+  )
+  (fc): Module()
+  (activation_post_process_6): FusedMovingAvgObsFakeQuantize(
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([0.0025]), zero_point=tensor([0], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_symmetric, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=-0.2811250388622284, max_val=0.31249532103538513)
   )
   (activation_post_process_0): FusedMovingAvgObsFakeQuantize(
-    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([1.]), zero_point=tensor([0], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([0.0227]), zero_point=tensor([5], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=-3.0279316902160645, max_val=2.7590487003326416)
   )
   (activation_post_process_2): FusedMovingAvgObsFakeQuantize(
-    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([1.]), zero_point=tensor([0], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([0.0137]), zero_point=tensor([-128], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=3.4919281005859375)
   )
   (activation_post_process_3): FusedMovingAvgObsFakeQuantize(
-    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([1.]), zero_point=tensor([0], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([0.0137]), zero_point=tensor([-128], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=3.4919281005859375)
+  )
+  (activation_post_process_4): FusedMovingAvgObsFakeQuantize(
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([0.0137]), zero_point=tensor([-128], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=3.4919281005859375)
+  )
+  (activation_post_process_5): FusedMovingAvgObsFakeQuantize(
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([0.0137]), zero_point=tensor([-128], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=3.4919281005859375)
+  )
+  (activation_post_process_7): FusedMovingAvgObsFakeQuantize(
+    fake_quant_enabled=tensor([1]), observer_enabled=tensor([1]), scale=tensor([0.0053]), zero_point=tensor([-67], dtype=torch.int32), dtype=torch.int8, quant_min=-128, quant_max=127, qscheme=torch.per_tensor_affine, reduce_range=False
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=-0.3214762508869171, max_val=1.03191339969635)
   )
 )
 
@@ -1903,39 +1764,68 @@ GraphModule(
 
 def forward(self, x):
     x, = fx_pytree.tree_flatten_spec(([x], {}), self._in_spec)
-    conv_weight = self.conv.weight
-    activation_post_process_1 = self.activation_post_process_1(conv_weight);  conv_weight = None
-    conv_bias = self.conv.bias
+    conv1_weight = self.conv1.weight
+    activation_post_process_1 = self.activation_post_process_1(conv1_weight);  conv1_weight = None
+    conv1_bias = self.conv1.bias
+    fc_weight = self.fc.weight
+    activation_post_process_6 = self.activation_post_process_6(fc_weight);  fc_weight = None
+    fc_bias = self.fc.bias
     activation_post_process_0 = self.activation_post_process_0(x);  x = None
-    conv2d = torch.ops.aten.conv2d.default(activation_post_process_0, activation_post_process_1, conv_bias);  activation_post_process_0 = activation_post_process_1 = conv_bias = None
-    activation_post_process_2 = self.activation_post_process_2(conv2d);  conv2d = None
+    conv2d = torch.ops.aten.conv2d.default(activation_post_process_0, activation_post_process_1, conv1_bias);  activation_post_process_0 = activation_post_process_1 = conv1_bias = None
+    relu = torch.ops.aten.relu.default(conv2d);  conv2d = None
+    activation_post_process_2 = self.activation_post_process_2(relu);  relu = None
     max_pool2d = torch.ops.aten.max_pool2d.default(activation_post_process_2, [28, 28], [28, 28]);  activation_post_process_2 = None
     activation_post_process_3 = self.activation_post_process_3(max_pool2d);  max_pool2d = None
-    squeeze = torch.ops.aten.squeeze.dims(activation_post_process_3, [1, 2]);  activation_post_process_3 = None
-    softmax = torch.ops.aten.softmax.int(squeeze, 1);  squeeze = None
-    return pytree.tree_unflatten((softmax,), self._out_spec)
+    squeeze = torch.ops.aten.squeeze.dim(activation_post_process_3, 2);  activation_post_process_3 = None
+    activation_post_process_4 = self.activation_post_process_4(squeeze);  squeeze = None
+    squeeze_1 = torch.ops.aten.squeeze.dim(activation_post_process_4, 2);  activation_post_process_4 = None
+    activation_post_process_5 = self.activation_post_process_5(squeeze_1);  squeeze_1 = None
+    linear = torch.ops.aten.linear.default(activation_post_process_5, activation_post_process_6, fc_bias);  activation_post_process_5 = activation_post_process_6 = fc_bias = None
+    activation_post_process_7 = self.activation_post_process_7(linear);  linear = None
+    return pytree.tree_unflatten((activation_post_process_7,), self._out_spec)
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
+
 
 from pprint import pprint
 pprint(pt2e_prepared_model.meta)
 '''
 {'_observed_graph_module_attrs': ObservedGraphModuleAttrs(node_name_to_qconfig={},
-                                                          node_name_to_scope={'conv2d': ('conv',
+                                                          node_name_to_scope={'_native_batch_norm_legit_no_training': ('bn1',
+                                                                                                                       'torch.nn.modules.batchnorm.BatchNorm2d'),
+                                                                              'bn1_bias': ('',
+                                                                                           <class 'NoneType'>),
+                                                                              'bn1_running_mean': ('',
+                                                                                                   <class 'NoneType'>),
+                                                                              'bn1_running_var': ('',
+                                                                                                  <class 'NoneType'>),
+                                                                              'bn1_weight': ('',
+                                                                                             <class 'NoneType'>),
+                                                                              'conv1_bias': ('',
+                                                                                             <class 'NoneType'>),
+                                                                              'conv1_weight': ('',
+                                                                                               <class 'NoneType'>),
+                                                                              'conv2d': ('conv1',
                                                                                          'torch.nn.modules.conv.Conv2d'),
-                                                                              'conv_bias': ('',
+                                                                              'fc_bias': ('',
+                                                                                          <class 'NoneType'>),
+                                                                              'fc_weight': ('',
                                                                                             <class 'NoneType'>),
-                                                                              'conv_weight': ('',
-                                                                                              <class 'NoneType'>),
+                                                                              'getitem': ('bn1',
+                                                                                          'torch.nn.modules.batchnorm.BatchNorm2d'),
+                                                                              'linear': ('fc',
+                                                                                         'torch.nn.modules.linear.Linear'),
                                                                               'max_pool2d': ('pool',
                                                                                              'torch.nn.modules.pooling.MaxPool2d'),
                                                                               'output_1': ('',
                                                                                            <class 'NoneType'>),
-                                                                              'softmax': ('',
-                                                                                          '__main__.ExampleModel'),
+                                                                              'relu': ('',
+                                                                                       '__main__.ExampleModel'),
                                                                               'squeeze': ('',
                                                                                           '__main__.ExampleModel'),
+                                                                              'squeeze_1': ('',
+                                                                                            '__main__.ExampleModel'),
                                                                               'x': ('',
                                                                                     <class 'NoneType'>)},
                                                           prepare_custom_config=PrepareCustomConfig({}),
@@ -1957,16 +1847,71 @@ pprint(pt2e_prepared_model.meta)
                                                           is_observed_standalone_module=False,
                                                           standalone_module_input_quantized_idxs=None,
                                                           standalone_module_output_quantized_idxs=None),
- 'dynamo_flat_name_to_original_fqn': {'L__self___conv_bias': 'conv.bias',
-                                      'L__self___conv_weight': 'conv.weight'},
+ 'dynamo_flat_name_to_original_fqn': {'L__self___bn1_bias': 'bn1.bias',
+                                      'L__self___bn1_num_batches_tracked': 'bn1.num_batches_tracked',
+                                      'L__self___bn1_running_mean': 'bn1.running_mean',
+                                      'L__self___bn1_running_var': 'bn1.running_var',
+                                      'L__self___bn1_weight': 'bn1.weight',
+                                      'L__self___conv1_bias': 'conv1.bias',
+                                      'L__self___conv1_weight': 'conv1.weight',
+                                      'L__self___fc_bias': 'fc.bias',
+                                      'L__self___fc_weight': 'fc.weight'},
  'forward_arg_names': ['x'],
  'inline_constraints': {},
  'input_shape_constraints': [],
  'module_call_specs': {}}
 '''
+
+
+pt2e_quantized_model = convert_pt2e(pt2e_prepared_model)
+print(pt2e_quantized_model)
+'''
+GraphModule(
+  (conv1): Module()
+  (fc): Module()
+)
+
+
+
+def forward(self, x):
+    x, = fx_pytree.tree_flatten_spec(([x], {}), self._in_spec)
+    _frozen_param0 = self._frozen_param0
+    dequantize_per_tensor_default = torch.ops.quantized_decomposed.dequantize_per_tensor.default(_frozen_param0, 0.007141348905861378, 0, -128, 127, torch.int8);  _frozen_param0 = None
+    conv1_bias = self.conv1.bias
+    _frozen_param1 = self._frozen_param1
+    dequantize_per_tensor_default_1 = torch.ops.quantized_decomposed.dequantize_per_tensor.default(_frozen_param1, 0.0024509436916559935, 0, -128, 127, torch.int8);  _frozen_param1 = None
+    fc_bias = self.fc.bias
+    quantize_per_tensor_default_2 = torch.ops.quantized_decomposed.quantize_per_tensor.default(x, 0.022694041952490807, 5, -128, 127, torch.int8);  x = None
+    dequantize_per_tensor_default_2 = torch.ops.quantized_decomposed.dequantize_per_tensor.default(quantize_per_tensor_default_2, 0.022694041952490807, 5, -128, 127, torch.int8);  quantize_per_tensor_default_2 = None
+    conv2d = torch.ops.aten.conv2d.default(dequantize_per_tensor_default_2, dequantize_per_tensor_default, conv1_bias);  dequantize_per_tensor_default_2 = dequantize_per_tensor_default = conv1_bias = None
+    relu = torch.ops.aten.relu.default(conv2d);  conv2d = None
+    quantize_per_tensor_default_3 = torch.ops.quantized_decomposed.quantize_per_tensor.default(relu, 0.013693835586309433, -128, -128, 127, torch.int8);  relu = None
+    dequantize_per_tensor_default_3 = torch.ops.quantized_decomposed.dequantize_per_tensor.default(quantize_per_tensor_default_3, 0.013693835586309433, -128, -128, 127, torch.int8);  quantize_per_tensor_default_3 = None
+    max_pool2d = torch.ops.aten.max_pool2d.default(dequantize_per_tensor_default_3, [28, 28], [28, 28]);  dequantize_per_tensor_default_3 = None
+    quantize_per_tensor_default_4 = torch.ops.quantized_decomposed.quantize_per_tensor.default(max_pool2d, 0.013693835586309433, -128, -128, 127, torch.int8);  max_pool2d = None
+    dequantize_per_tensor_default_4 = torch.ops.quantized_decomposed.dequantize_per_tensor.default(quantize_per_tensor_default_4, 0.013693835586309433, -128, -128, 127, torch.int8);  quantize_per_tensor_default_4 = None
+    squeeze = torch.ops.aten.squeeze.dim(dequantize_per_tensor_default_4, 2);  dequantize_per_tensor_default_4 = None
+    quantize_per_tensor_default_5 = torch.ops.quantized_decomposed.quantize_per_tensor.default(squeeze, 0.013693835586309433, -128, -128, 127, torch.int8);  squeeze = None
+    dequantize_per_tensor_default_5 = torch.ops.quantized_decomposed.dequantize_per_tensor.default(quantize_per_tensor_default_5, 0.013693835586309433, -128, -128, 127, torch.int8);  quantize_per_tensor_default_5 = None
+    squeeze_1 = torch.ops.aten.squeeze.dim(dequantize_per_tensor_default_5, 2);  dequantize_per_tensor_default_5 = None
+    quantize_per_tensor_default_6 = torch.ops.quantized_decomposed.quantize_per_tensor.default(squeeze_1, 0.013693835586309433, -128, -128, 127, torch.int8);  squeeze_1 = None
+    dequantize_per_tensor_default_6 = torch.ops.quantized_decomposed.dequantize_per_tensor.default(quantize_per_tensor_default_6, 0.013693835586309433, -128, -128, 127, torch.int8);  quantize_per_tensor_default_6 = None
+    linear = torch.ops.aten.linear.default(dequantize_per_tensor_default_6, dequantize_per_tensor_default_1, fc_bias);  dequantize_per_tensor_default_6 = dequantize_per_tensor_default_1 = fc_bias = None
+    quantize_per_tensor_default_7 = torch.ops.quantized_decomposed.quantize_per_tensor.default(linear, 0.005307410378009081, -67, -128, 127, torch.int8);  linear = None
+    dequantize_per_tensor_default_7 = torch.ops.quantized_decomposed.dequantize_per_tensor.default(quantize_per_tensor_default_7, 0.005307410378009081, -67, -128, 127, torch.int8);  quantize_per_tensor_default_7 = None
+    return pytree.tree_unflatten((dequantize_per_tensor_default_7,), self._out_spec)
+
+# To see more debug info, please use `graph_module.print_readable()`
+'''
 ```
 
-As we can see, the inserted nodes are not lowered to aten operations just yet, since they still could be used for QAT training (which need modules). Then, the data indicating which nodes were annotated for quantization and how are saved in the meta attribute as a dictionary.
+As we can see, when preparing the observers, the inserted nodes are not lowered to aten operations just yet, since they still could be used for QAT training (which need modules).
+
+Then, the data indicating which nodes were annotated for quantization and how are saved in the meta attribute as a dictionary.
+
+Finally, when quantized, the observers are now lowered to actual quantize and dequantize nodes.
+
+Notice too that when preparing the model in eval mode, the batch normalization nodes are fused without us needing to specify so. However, when preparing for QAT, they will remain.
 
 ##### Custom FX BackendConfigs based on PT2E code
 
@@ -2587,16 +2532,17 @@ from torch.ao.quantization.backend_config import get_native_backend_config
 
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
-        self.conv = torch.nn.Conv2d(3,30,1,1)
+        self.conv = torch.nn.Conv2d(1,30,1,1)
         self.spconv1 = torch.nn.Conv2d(15,5,1,1)
         self.spconv2 = torch.nn.Conv2d(15,5,1,1)
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
+        self.fc = torch.nn.Linear(10, 10)
     def forward(self,x):
         x = self.conv(x)
         y,z = torch.split(x,2)
@@ -2604,8 +2550,9 @@ class ExampleModel(torch.nn.Module):
         z = self.spconv2(z)
         x = torch.cat([y,z], dim=1)
         x = self.pool(x)
-        x = torch.squeeze(x, dim=(1,2))
-        x = torch.softmax(x,dim=1)
+        x = torch.squeeze(x, dim=2)
+        x = torch.squeeze(x, dim=2)
+        x = self.fc(x)
         return x
 
 
@@ -2632,10 +2579,11 @@ traced_fx = GraphModule(tracer.root, graph, 'ExampleModel')
 print(traced_fx)
 '''
 ExampleModel(
-  (conv): Conv2d(3, 30, kernel_size=(1, 1), stride=(1, 1))
+  (conv): Conv2d(1, 30, kernel_size=(1, 1), stride=(1, 1))
   (spconv1): Conv2d(15, 5, kernel_size=(1, 1), stride=(1, 1))
   (spconv2): Conv2d(15, 5, kernel_size=(1, 1), stride=(1, 1))
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (fc): Linear(in_features=10, out_features=10, bias=True)
 )
 
 
@@ -2649,15 +2597,16 @@ def forward(self, x):
     spconv2 = self.spconv2(getitem_1);  getitem_1 = None
     cat = torch.cat([spconv1, spconv2], dim = 1);  spconv1 = spconv2 = None
     pool = self.pool(cat);  cat = None
-    squeeze = torch.squeeze(pool, dim = (1, 2));  pool = None
-    softmax = torch.softmax(squeeze, dim = 1);  squeeze = None
-    return softmax
+    squeeze = torch.squeeze(pool, dim = 2);  pool = None
+    squeeze_1 = torch.squeeze(squeeze, dim = 2);  squeeze = None
+    fc = self.fc(squeeze_1);  squeeze_1 = None
+    return fc
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
 
 # FX prepare the quantization nodes
-example_inputs = (torch.randn(1,3,28,28),)
+example_inputs = (torch.randn(1,1,28,28),)
 backend_config = get_native_backend_config()
 prepared_fx = prepare(
     traced_fx,
@@ -2672,7 +2621,7 @@ print(prepared_fx)
 GraphModule(
   (activation_post_process_0): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   (conv): Conv2d(
-    3, 30, kernel_size=(1, 1), stride=(1, 1)
+    1, 30, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
   )
   (activation_post_process_1): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
@@ -2692,6 +2641,12 @@ GraphModule(
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
   (activation_post_process_7): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   (activation_post_process_8): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_9): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (fc): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+  )
+  (activation_post_process_10): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
 )
 
 
@@ -2713,10 +2668,13 @@ def forward(self, x):
     activation_post_process_6 = self.activation_post_process_6(cat);  cat = None
     pool = self.pool(activation_post_process_6);  activation_post_process_6 = None
     activation_post_process_7 = self.activation_post_process_7(pool);  pool = None
-    squeeze = torch.squeeze(activation_post_process_7, dim = (1, 2));  activation_post_process_7 = None
+    squeeze = torch.squeeze(activation_post_process_7, dim = 2);  activation_post_process_7 = None
     activation_post_process_8 = self.activation_post_process_8(squeeze);  squeeze = None
-    softmax = torch.softmax(activation_post_process_8, dim = 1);  activation_post_process_8 = None
-    return softmax
+    squeeze_1 = torch.squeeze(activation_post_process_8, dim = 2);  activation_post_process_8 = None
+    activation_post_process_9 = self.activation_post_process_9(squeeze_1);  squeeze_1 = None
+    fc = self.fc(activation_post_process_9);  activation_post_process_9 = None
+    activation_post_process_10 = self.activation_post_process_10(fc);  fc = None
+    return activation_post_process_10
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
@@ -2727,7 +2685,7 @@ print(prepared_fx)
 GraphModule(
   (activation_post_process_0): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   (conv): Conv2d(
-    3, 30, kernel_size=(1, 1), stride=(1, 1)
+    1, 30, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
   )
   (activation_post_process_1): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
@@ -2745,6 +2703,12 @@ GraphModule(
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
   (activation_post_process_7): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   (activation_post_process_8): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (activation_post_process_9): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (fc): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([]), max_val=tensor([]))
+  )
+  (activation_post_process_10): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
 )
 
 
@@ -2766,10 +2730,13 @@ def forward(self, x):
     activation_post_process_6 = self.activation_post_process_6(cat);  cat = None
     pool = self.pool(activation_post_process_6);  activation_post_process_6 = None
     activation_post_process_7 = self.activation_post_process_7(pool);  pool = None
-    squeeze = torch.squeeze(activation_post_process_7, dim = (1, 2));  activation_post_process_7 = None
+    squeeze = torch.squeeze(activation_post_process_7, dim = 2);  activation_post_process_7 = None
     activation_post_process_8 = self.activation_post_process_7(squeeze);  squeeze = None
-    softmax = torch.softmax(activation_post_process_8, dim = 1);  activation_post_process_8 = None
-    return softmax
+    squeeze_1 = torch.squeeze(activation_post_process_8, dim = 2);  activation_post_process_8 = None
+    activation_post_process_9 = self.activation_post_process_7(squeeze_1);  squeeze_1 = None
+    fc = self.fc(activation_post_process_9);  activation_post_process_9 = None
+    activation_post_process_10 = self.activation_post_process_10(fc);  fc = None
+    return activation_post_process_10
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
@@ -2842,7 +2809,6 @@ def fuse_qat_bn_post_process(
             keep weight fake-quant op, depending on the backend. Defaults
             to False.                
     """
-
     def traverse(module):
         for name, child in module.named_children():
             # Trace `SUPPORT_QAT_MODULES` recursively.
@@ -2852,12 +2818,10 @@ def fuse_qat_bn_post_process(
                 # to perform these operations and do dequantize to
                 # introduce quantization loss in advance.
                 weight_fakequant = child.weight_fake_quant
-
                 # `to_float()` function fuse BN into conv or conv_relu, and
                 # also convert a qat module to a normal module.
                 # source url: https://github.com/pytorch/pytorch/blob/master/torch/nn/intrinsic/qat/modules/conv_fused.py # noqa: E501
                 float_child = child.to_float()
-
                 # Only necessary for cases where the fake quant operation
                 # is removed from the graph
                 if update_weight_with_fakequant:
@@ -2879,7 +2843,6 @@ def fuse_qat_bn_post_process(
                     else:
                         new_child = type(child).from_float(float_child).to(
                             device)
-
                     # because weight fakequants and observers are replaced
                     # with base fakequants and base observers, some
                     # initialized args need to be update by running
@@ -2892,7 +2855,6 @@ def fuse_qat_bn_post_process(
                 setattr(module, name, new_child)
             else:
                 traverse(child)
-
     observed_module.apply(enable_fake_quant)
     observed_module.apply(disable_observer)
     traverse(observed_module)
@@ -3145,27 +3107,26 @@ from torch.ao.quantization.backend_config import get_native_backend_config
 
 class ExampleModel(torch.nn.Module):
     '''
-    Expects mnist input of shape (batch,3,28,28)
+    Expects mnist input of shape (batch,1,28,28)
     '''
     def __init__(self):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(3,30,1,1)
-        self.act1 = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv2d(30,10,1,1)
-        self.act2 = lambda x: torch.clamp(x, min=0,max=6)
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
+        self.conv2 = torch.nn.Conv2d(32,10,1,1)
         # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
         # not supported once quantized, so replace with manual MaxPool2d
         self.pool = torch.nn.MaxPool2d(28,28)
+        self.fc = torch.nn.Linear(10, 10)
     def forward(self,x):
         x = self.conv1(x)
-        x = self.act1(x)
+        x = torch.nn.functional.relu(x)
         x = self.conv2(x)
-        x = self.act2(x)
+        x = torch.nn.functional.relu(x)
         x = self.pool(x)
-        x = torch.squeeze(x, dim=(1,2))
-        x = torch.softmax(x,dim=1)
+        x = torch.squeeze(x, dim=2)
+        x = torch.squeeze(x, dim=2)
+        x = self.fc(x)
         return x
-    
 
 model = ExampleModel()
 
@@ -3190,29 +3151,31 @@ traced_fx = GraphModule(tracer.root, graph, 'ExampleModel')
 print(traced_fx)
 '''
 ExampleModel(
-  (conv1): Conv2d(3, 30, kernel_size=(1, 1), stride=(1, 1))
-  (act1): ReLU()
-  (conv2): Conv2d(30, 10, kernel_size=(1, 1), stride=(1, 1))
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+  (conv2): Conv2d(32, 10, kernel_size=(1, 1), stride=(1, 1))
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (fc): Linear(in_features=10, out_features=10, bias=True)
 )
 
 
 
 def forward(self, x):
     conv1 = self.conv1(x);  x = None
-    act1 = self.act1(conv1);  conv1 = None
-    conv2 = self.conv2(act1);  act1 = None
-    clamp = torch.clamp(conv2, min = 0, max = 6);  conv2 = None
-    pool = self.pool(clamp);  clamp = None
-    squeeze = torch.squeeze(pool, dim = (1, 2));  pool = None
-    softmax = torch.softmax(squeeze, dim = 1);  squeeze = None
-    return softmax
+    relu = torch.nn.functional.relu(conv1, inplace = False);  conv1 = None
+    conv2 = self.conv2(relu);  relu = None
+    relu_1 = torch.nn.functional.relu(conv2, inplace = False);  conv2 = None
+    pool = self.pool(relu_1);  relu_1 = None
+    squeeze = torch.squeeze(pool, dim = 2);  pool = None
+    squeeze_1 = torch.squeeze(squeeze, dim = 2);  squeeze = None
+    fc = self.fc(squeeze_1);  squeeze_1 = None
+    return fc
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
 
+# Don't fuse just to prove what happens to nodes that can't fuse with ReLU
 # FX prepare the quantization nodes
-example_inputs = (torch.randn(1,3,28,28),)
+example_inputs = (torch.randn(1,1,28,28),)
 backend_config = get_native_backend_config()
 backend_config = relu_clamp_backend_config_unshare_observers(backend_config)
 
@@ -3229,35 +3192,44 @@ prepared_fx(example_inputs[0])
 print(prepared_fx)
 '''
 GraphModule(
-  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=-2.9545626640319824, max_val=3.1445419788360596)
+  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=-3.358337879180908, max_val=3.094209671020508)
   (conv1): Conv2d(
-    3, 30, kernel_size=(1, 1), stride=(1, 1)
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([-0.1375, -0.1876, -0.1184,  0.0116, -0.0488, -0.2734,  0.1339, -0.3534,
-               0.3769, -0.5600, -0.1161, -0.5276, -0.3045, -0.3597, -0.4791, -0.2581,
-              -0.4015, -0.5177, -0.5346,  0.1327,  0.0713,  0.0221, -0.1422,  0.2482,
-              -0.4426, -0.3206, -0.2918, -0.2467, -0.4744, -0.4758]), max_val=tensor([ 0.5116,  0.4654,  0.0893,  0.5642,  0.1776,  0.0879,  0.3281,  0.4236,
-               0.5714,  0.0517,  0.4944,  0.4848, -0.0626, -0.0021,  0.2216,  0.3107,
-               0.3877,  0.5147, -0.0071,  0.2758,  0.4377,  0.2373,  0.4681,  0.3450,
-              -0.1243,  0.3527,  0.4179,  0.3103,  0.4680,  0.1846])
+      min_val=tensor([ 0.3141,  0.8659, -0.3041, -0.4085, -0.3968,  0.2745,  0.3924,  0.6181,
+              -0.6419,  0.3388, -0.6847,  0.6948, -0.6194,  0.5268,  0.5759, -0.2281,
+               0.0610,  0.7425, -0.1603,  0.7990, -0.9284,  0.3517,  0.5457, -0.3669,
+               0.5580, -0.4137, -0.4218, -0.9705, -0.5250, -0.5045,  0.4345, -0.2527]), max_val=tensor([ 0.3141,  0.8659, -0.3041, -0.4085, -0.3968,  0.2745,  0.3924,  0.6181,
+              -0.6419,  0.3388, -0.6847,  0.6948, -0.6194,  0.5268,  0.5759, -0.2281,
+               0.0610,  0.7425, -0.1603,  0.7990, -0.9284,  0.3517,  0.5457, -0.3669,
+               0.5580, -0.4137, -0.4218, -0.9705, -0.5250, -0.5045,  0.4345, -0.2527])
     )
   )
-  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=-3.0763697624206543, max_val=2.751403570175171)
-  (act1): ReLU()
-  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=0.0, max_val=2.751403570175171)
+  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=-3.481182813644409, max_val=3.503840446472168)
+  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=-3.481182813644409, max_val=3.503840446472168)
   (conv2): Conv2d(
-    30, 10, kernel_size=(1, 1), stride=(1, 1)
+    32, 10, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([-0.1651, -0.1804, -0.1616, -0.1312, -0.1584, -0.1677, -0.1741, -0.1756,
-              -0.1757, -0.1524]), max_val=tensor([0.1695, 0.1637, 0.1812, 0.1806, 0.1794, 0.1784, 0.1782, 0.1807, 0.1487,
-              0.1775])
+      min_val=tensor([-0.1766, -0.1619, -0.1684, -0.1532, -0.1666, -0.1548, -0.1617, -0.1751,
+              -0.1721, -0.1630]), max_val=tensor([0.1635, 0.1671, 0.1758, 0.1766, 0.1646, 0.1757, 0.1751, 0.1609, 0.1639,
+              0.1756])
     )
   )
-  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=-0.9701404571533203, max_val=1.0918760299682617)
-  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.0918760299682617)
+  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.0918760299682617)
-  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.0918760299682617)
+  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_7): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (fc): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-0.3113, -0.1477, -0.3055, -0.2916, -0.2433, -0.3093, -0.3096, -0.2451,
+              -0.3053, -0.2737]), max_val=tensor([0.3001, 0.2993, 0.2062, 0.2732, 0.1871, 0.2586, 0.2617, 0.2384, 0.1637,
+              0.3034])
+    )
+  )
+  (activation_post_process_8): MovingAverageMinMaxObserver(min_val=-0.4853910207748413, max_val=0.9318119287490845)
 )
 
 
@@ -3266,24 +3238,27 @@ def forward(self, x):
     activation_post_process_0 = self.activation_post_process_0(x);  x = None
     conv1 = self.conv1(activation_post_process_0);  activation_post_process_0 = None
     activation_post_process_1 = self.activation_post_process_1(conv1);  conv1 = None
-    act1 = self.act1(activation_post_process_1);  activation_post_process_1 = None
-    activation_post_process_2 = self.activation_post_process_2(act1);  act1 = None
+    relu = torch.nn.functional.relu(activation_post_process_1, inplace = False);  activation_post_process_1 = None
+    activation_post_process_2 = self.activation_post_process_2(relu);  relu = None
     conv2 = self.conv2(activation_post_process_2);  activation_post_process_2 = None
     activation_post_process_3 = self.activation_post_process_3(conv2);  conv2 = None
-    clamp = torch.clamp(activation_post_process_3, min = 0, max = 6);  activation_post_process_3 = None
-    activation_post_process_4 = self.activation_post_process_4(clamp);  clamp = None
+    relu_1 = torch.nn.functional.relu(activation_post_process_3, inplace = False);  activation_post_process_3 = None
+    activation_post_process_4 = self.activation_post_process_4(relu_1);  relu_1 = None
     pool = self.pool(activation_post_process_4);  activation_post_process_4 = None
     activation_post_process_5 = self.activation_post_process_5(pool);  pool = None
-    squeeze = torch.squeeze(activation_post_process_5, dim = (1, 2));  activation_post_process_5 = None
+    squeeze = torch.squeeze(activation_post_process_5, dim = 2);  activation_post_process_5 = None
     activation_post_process_6 = self.activation_post_process_6(squeeze);  squeeze = None
-    softmax = torch.softmax(activation_post_process_6, dim = 1);  activation_post_process_6 = None
-    return softmax
+    squeeze_1 = torch.squeeze(activation_post_process_6, dim = 2);  activation_post_process_6 = None
+    activation_post_process_7 = self.activation_post_process_7(squeeze_1);  squeeze_1 = None
+    fc = self.fc(activation_post_process_7);  activation_post_process_7 = None
+    activation_post_process_8 = self.activation_post_process_8(fc);  fc = None
+    return activation_post_process_8
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
 ```
 
-As we can see, the `min_val` for the `activation_post_process_1` and `activation_post_process_2`, as well as `activation_post_process_3` and `activation_post_process_4` are different after passing some example input to the observers, which means we can just eliminate the previous activation and nodes if we no longer need to train or calibrate a model. Assuming we had done that:
+As we can see, the `min_val` for the `activation_post_process_1` and `activation_post_process_2`, as well as `activation_post_process_3` and `activation_post_process_4`, and so on on nodes followed by unfused relu with their own observer are different after passing some example input to the observers, which means we can just eliminate the previous activation and nodes if we no longer need to train or calibrate a model. Assuming we had done that:
 
 
 ```python
@@ -3379,32 +3354,44 @@ merge_relu_clamp_to_qparams_post_process(prepared_fx)
 print(prepared_fx)
 '''
 GraphModule(
-  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=-2.9545626640319824, max_val=3.1445419788360596)
+  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=-3.358337879180908, max_val=3.094209671020508)
   (conv1): Conv2d(
-    3, 30, kernel_size=(1, 1), stride=(1, 1)
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([-0.1375, -0.1876, -0.1184,  0.0116, -0.0488, -0.2734,  0.1339, -0.3534,
-               0.3769, -0.5600, -0.1161, -0.5276, -0.3045, -0.3597, -0.4791, -0.2581,
-              -0.4015, -0.5177, -0.5346,  0.1327,  0.0713,  0.0221, -0.1422,  0.2482,
-              -0.4426, -0.3206, -0.2918, -0.2467, -0.4744, -0.4758]), max_val=tensor([ 0.5116,  0.4654,  0.0893,  0.5642,  0.1776,  0.0879,  0.3281,  0.4236,
-               0.5714,  0.0517,  0.4944,  0.4848, -0.0626, -0.0021,  0.2216,  0.3107,
-               0.3877,  0.5147, -0.0071,  0.2758,  0.4377,  0.2373,  0.4681,  0.3450,
-              -0.1243,  0.3527,  0.4179,  0.3103,  0.4680,  0.1846])
+      min_val=tensor([ 0.3141,  0.8659, -0.3041, -0.4085, -0.3968,  0.2745,  0.3924,  0.6181,
+              -0.6419,  0.3388, -0.6847,  0.6948, -0.6194,  0.5268,  0.5759, -0.2281,
+               0.0610,  0.7425, -0.1603,  0.7990, -0.9284,  0.3517,  0.5457, -0.3669,
+               0.5580, -0.4137, -0.4218, -0.9705, -0.5250, -0.5045,  0.4345, -0.2527]), max_val=tensor([ 0.3141,  0.8659, -0.3041, -0.4085, -0.3968,  0.2745,  0.3924,  0.6181,
+              -0.6419,  0.3388, -0.6847,  0.6948, -0.6194,  0.5268,  0.5759, -0.2281,
+               0.0610,  0.7425, -0.1603,  0.7990, -0.9284,  0.3517,  0.5457, -0.3669,
+               0.5580, -0.4137, -0.4218, -0.9705, -0.5250, -0.5045,  0.4345, -0.2527])
     )
   )
-  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=0.0, max_val=2.751403570175171)
+  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=-3.481182813644409, max_val=3.503840446472168)
+  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=-3.481182813644409, max_val=3.503840446472168)
   (conv2): Conv2d(
-    30, 10, kernel_size=(1, 1), stride=(1, 1)
+    32, 10, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([-0.1651, -0.1804, -0.1616, -0.1312, -0.1584, -0.1677, -0.1741, -0.1756,
-              -0.1757, -0.1524]), max_val=tensor([0.1695, 0.1637, 0.1812, 0.1806, 0.1794, 0.1784, 0.1782, 0.1807, 0.1487,
-              0.1775])
+      min_val=tensor([-0.1766, -0.1619, -0.1684, -0.1532, -0.1666, -0.1548, -0.1617, -0.1751,
+              -0.1721, -0.1630]), max_val=tensor([0.1635, 0.1671, 0.1758, 0.1766, 0.1646, 0.1757, 0.1751, 0.1609, 0.1639,
+              0.1756])
     )
   )
-  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.0918760299682617)
+  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.0918760299682617)
-  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.0918760299682617)
+  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_7): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (fc): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-0.3113, -0.1477, -0.3055, -0.2916, -0.2433, -0.3093, -0.3096, -0.2451,
+              -0.3053, -0.2737]), max_val=tensor([0.3001, 0.2993, 0.2062, 0.2732, 0.1871, 0.2586, 0.2617, 0.2384, 0.1637,
+              0.3034])
+    )
+  )
+  (activation_post_process_8): MovingAverageMinMaxObserver(min_val=-0.4853910207748413, max_val=0.9318119287490845)
 )
 
 
@@ -3412,20 +3399,29 @@ GraphModule(
 def forward(self, x):
     activation_post_process_0 = self.activation_post_process_0(x);  x = None
     conv1 = self.conv1(activation_post_process_0);  activation_post_process_0 = None
-    activation_post_process_2 = self.activation_post_process_2(conv1);  conv1 = None
+    activation_post_process_1 = self.activation_post_process_1(conv1);  conv1 = None
+    relu = torch.nn.functional.relu(activation_post_process_1, inplace = False);  activation_post_process_1 = None
+    activation_post_process_2 = self.activation_post_process_2(relu);  relu = None
     conv2 = self.conv2(activation_post_process_2);  activation_post_process_2 = None
-    activation_post_process_4 = self.activation_post_process_4(conv2);  conv2 = None
+    activation_post_process_3 = self.activation_post_process_3(conv2);  conv2 = None
+    relu_1 = torch.nn.functional.relu(activation_post_process_3, inplace = False);  activation_post_process_3 = None
+    activation_post_process_4 = self.activation_post_process_4(relu_1);  relu_1 = None
     pool = self.pool(activation_post_process_4);  activation_post_process_4 = None
     activation_post_process_5 = self.activation_post_process_5(pool);  pool = None
-    squeeze = torch.squeeze(activation_post_process_5, dim = (1, 2));  activation_post_process_5 = None
+    squeeze = torch.squeeze(activation_post_process_5, dim = 2);  activation_post_process_5 = None
     activation_post_process_6 = self.activation_post_process_6(squeeze);  squeeze = None
-    softmax = torch.softmax(activation_post_process_6, dim = 1);  activation_post_process_6 = None
-    return softmax
+    squeeze_1 = torch.squeeze(activation_post_process_6, dim = 2);  activation_post_process_6 = None
+    activation_post_process_7 = self.activation_post_process_7(squeeze_1);  squeeze_1 = None
+    fc = self.fc(activation_post_process_7);  activation_post_process_7 = None
+    activation_post_process_8 = self.activation_post_process_8(fc);  fc = None
+    return activation_post_process_8
 
 # To see more debug info, please use `graph_module.print_readable()`
 '''
 
 ```
+
+While convolutions and linear layers usually can be fused without resorting to this method, other unfusable layers can benefit from this process.
 
 
 #### Quantization complete examples
@@ -3457,73 +3453,6 @@ import torchvision
 from torchvision import datasets
 from torchvision.transforms import v2 as transformsv2
 
-## Load datasets
-batch_size = 64
-transform=transformsv2.Compose([
-        transformsv2.ToTensor(),
-        transformsv2.Normalize((0.1307,), (0.3081,)),
-        transformsv2.RGB(),
-        ])
-dataset1 = datasets.MNIST(
-    '../data',
-    train=True,
-    download=True,
-    transform=transform,
-    )
-dataset2 = datasets.MNIST(
-    '../data',
-    train=False,
-    transform=transform,
-    )
-train_loader = torch.utils.data.DataLoader(dataset1, batch_size=batch_size)
-test_loader = torch.utils.data.DataLoader(dataset2, batch_size=batch_size)
-
-
-class ExampleModel(torch.nn.Module):
-    '''
-    Expects mnist input of shape (batch,3,28,28)
-    '''
-    def __init__(self):
-        super().__init__()
-        self.quant = torch.ao.quantization.QuantStub()
-        self.dequant = torch.ao.quantization.DeQuantStub()
-        self.conv = torch.nn.Conv2d(3,10,1,1)
-        # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
-        # not supported once quantized, so replace with manual MaxPool2d
-        self.pool = torch.nn.MaxPool2d(28,28)
-    def forward(self,x):
-        x = self.quant(x)
-        x = self.conv(x)
-        x = self.pool(x)
-        x = torch.squeeze(x, dim=(1,2))
-        x = self.dequant(x)
-        x = torch.softmax(x,dim=1)
-        return x
-
-
-model = ExampleModel()
-
-model.qconfig = QConfig(
-    activation=MovingAverageMinMaxObserver.with_args(
-        dtype=torch.quint8,
-        qscheme=torch.per_tensor_affine,
-        ),
-    weight=MovingAveragePerChannelMinMaxObserver.with_args(
-        dtype=torch.qint8,
-        qscheme=torch.per_channel_symmetric,
-        ),
-    )
-
-print(model)
-'''
-ExampleModel(
-  (quant): QuantStub()
-  (dequant): DeQuantStub()
-  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-)
-'''
-
 ## Define training and testing cycles
 def train(
         model,
@@ -3541,7 +3470,6 @@ def train(
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        target = target.reshape(-1,1)
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
@@ -3567,10 +3495,9 @@ def test(
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            target = target.reshape(-1,1)
             test_loss += criterion(output, target).item()
             # sum up batch loss
-            pred = torch.argmax(output,dim=1)
+            pred = torch.argmax(output,dim=1,keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
     test_loss /= n_data
     test_percent = 100. * correct / n_data
@@ -3595,10 +3522,9 @@ def calibrate_ptq(
             if i<=n_batches:
                 data, target = data.to(device), target.to(device)
                 output = prepared_model(data)
-                target = target.reshape(-1,1)
                 cal_loss += criterion(output, target).item()
                 # sum up batch loss
-                pred = torch.argmax(output,dim=1)
+                pred = torch.argmax(output,dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()
             else:
                 break
@@ -3607,20 +3533,173 @@ def calibrate_ptq(
     print(f'\nCalibrate set: Average loss: {cal_loss:.4f}, Accuracy: {correct}/{n_data} ({cal_percent:.0f}%)\n')
 
 
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,1,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(32)
+        self.act1 = torch.nn.ReLU()
+        # self.pool1 = torch.nn.AdaptiveMaxPool2d((14,14))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool1 = torch.nn.MaxPool2d(2,2)
+        self.conv2 = torch.nn.Conv2d(32,64,1,1)
+        self.bn2 = torch.nn.BatchNorm2d(64)
+        self.act2 = torch.nn.ReLU()
+        # self.pool2 = torch.nn.AdaptiveMaxPool2d((7,7))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool2 = torch.nn.MaxPool2d(2,2)
+        self.fl1 = torch.nn.Flatten(start_dim=1)
+        self.fc1 = torch.nn.Linear(3136, 10)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(10, 10)
+    def forward(self,x):
+        x = self.quant(x)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.act1(x)
+        x = self.pool1(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.act2(x)
+        x = self.pool2(x)
+        x = self.fl1(x)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
+        x = self.dequant(x)
+        return x
+    def fuse_model(self):
+        torch.ao.quantization.fuse_modules(
+            self,
+            ['conv1','bn1','act1'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules(
+            self,
+            ['conv2','bn2','act2'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules(
+            self,
+            ['fc1','fc1act'],
+            inplace=True,
+            )
 
-lr = 0.001
-optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+
+qconfig = QConfig(
+    activation=MovingAverageMinMaxObserver.with_args(
+        dtype=torch.quint8,
+        qscheme=torch.per_tensor_affine,
+        ),
+    weight=MovingAveragePerChannelMinMaxObserver.with_args(
+        dtype=torch.qint8,
+        qscheme=torch.per_channel_symmetric,
+        ),
+    )
+
+model = ExampleModel()
+model.qconfig = qconfig
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act1): ReLU()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act2): ReLU()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): Linear(in_features=3136, out_features=10, bias=True)
+  (fc1act): ReLU()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
+
+## Load datasets
+batch_size = 64
+transform=transformsv2.Compose([
+        transformsv2.ToTensor(),
+        transformsv2.Normalize((0.1307,), (0.3081,)),
+        ])
+dataset1 = datasets.MNIST(
+    '../data',
+    train=True,
+    download=True,
+    transform=transform,
+    )
+dataset2 = datasets.MNIST(
+    '../data',
+    train=False,
+    transform=transform,
+    )
+train_loader = torch.utils.data.DataLoader(dataset1, batch_size=batch_size)
+test_loader = torch.utils.data.DataLoader(dataset2, batch_size=batch_size)
+
+
+device = 'cuda:0'
+model.to(device)
+lr = 0.9
+optimizer = torch.optim.Adadelta(model.parameters(), lr=lr)
 criterion = torch.nn.CrossEntropyLoss()
-device = 'cpu'
-max_epochs = 3
+max_epochs = 20
+scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    optimizer,
+    max_lr=lr,
+    steps_per_epoch=int(((len(train_loader)-1)//batch_size + 1)),
+    epochs=max_epochs,
+    cycle_momentum=False)
+log_interval = 60
 
 # train float model
 for epoch in range(1, max_epochs + 1):
-    train(model, device, train_loader, optimizer, criterion, epoch)
+    train(model, device, train_loader, optimizer, criterion, epoch, log_interval)
     test(model, device, test_loader, criterion)
+    scheduler.step()
 
-# Test set: Average loss: 0.0361, Accuracy: 1135/10000 (11%)
-# not a good model at all, but an example of the process
+# Test set: Average loss: 0.0053, Accuracy: 8973/10000 (90%)
+# not the best model at all, but an example of the process
+
+
+# fusion is only for eval
+model.eval()
+model.fuse_model()
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): ConvReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=3136, out_features=10, bias=True)
+    (1): ReLU()
+  )
+  (fc1act): Identity()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
 
 # prepare model with observers
 prepared_model = torch.ao.quantization.prepare(model, inplace=False)
@@ -3631,11 +3710,33 @@ ExampleModel(
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
   (dequant): DeQuantStub()
-  (conv): Conv2d(
-    3, 10, kernel_size=(1, 1), stride=(1, 1)
+  (conv1): ConvReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=3136, out_features=10, bias=True)
+    (1): ReLU()
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (fc1act): Identity()
+  (fc2): Linear(
+    in_features=10, out_features=10, bias=True
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
 )
 '''
 
@@ -3648,39 +3749,66 @@ ExampleModel(
     (activation_post_process): MovingAverageMinMaxObserver(min_val=-0.4242129623889923, max_val=2.821486711502075)
   )
   (dequant): DeQuantStub()
-  (conv): Conv2d(
-    3, 10, kernel_size=(1, 1), stride=(1, 1)
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=-3.6499884128570557, max_val=1.181993842124939)
+  (conv1): ConvReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=3.325491428375244)
   )
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=7.998041152954102)
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=3136, out_features=10, bias=True)
+    (1): ReLU()
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=32.929901123046875)
+  )
+  (fc1act): Identity()
+  (fc2): Linear(
+    in_features=10, out_features=10, bias=True
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=-24.292884826660156, max_val=10.0259428024292)
+  )
 )
 '''
 
 # freeze observers for a pre-conversion test
 torch.ao.quantization.fake_quantize.disable_observer(prepared_model)
-test(prepared_model, device, test_loader, criterion)
+test(prepared_model.cpu(), 'cpu', test_loader, criterion)
+# Test set: Average loss: 0.0053, Accuracy: 8973/10000 (90%)
 
-# Test set: Average loss: 0.0361, Accuracy: 1135/10000 (11%)
-# not a good model at all, but an example of the process
-# a good float model, when tested with fake quantization loses some accuracy
-# so this might be the lowest possible accuracy or random output.
 
-quantized_model = torch.ao.quantization.convert(prepared_model, inplace=False)
+quantized_model = torch.ao.quantization.convert(prepared_model.cpu(), inplace=False)
 print(quantized_model)
 '''
 ExampleModel(
   (quant): Quantize(scale=tensor([0.0127]), zero_point=tensor([33]), dtype=torch.quint8)
   (dequant): DeQuantize()
-  (conv): QuantizedConv2d(3, 10, kernel_size=(1, 1), stride=(1, 1), scale=0.018948949873447418, zero_point=193)
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (conv1): QuantizedConvReLU2d(1, 32, kernel_size=(1, 1), stride=(1, 1), scale=0.01304114330559969, zero_point=0)
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): QuantizedConvReLU2d(32, 64, kernel_size=(1, 1), stride=(1, 1), scale=0.03141188994050026, zero_point=0)
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): QuantizedLinearReLU(in_features=3136, out_features=10, scale=0.12418901175260544, zero_point=0, qscheme=torch.per_channel_affine)
+  (fc1act): Identity()
+  (fc2): QuantizedLinear(in_features=10, out_features=10, scale=0.1393708884716034, zero_point=175, qscheme=torch.per_channel_affine)
 )
 '''
-test(quantized_model, device, test_loader, criterion)
+test(quantized_model, 'cpu', test_loader, criterion)
 
-# Test set: Average loss: 0.0361, Accuracy: 1135/10000 (11%)
-# not a good model at all, but an example of the process
-# a good float model, when tested with converted quantization loses some accuracy
-# so this might be the lowest possible accuracy or random output.
+# Test set: Average loss: 0.0065, Accuracy: 8774/10000 (88%)
+# when tested with converted quantization loses some accuracy
 ```
 
 
@@ -3702,7 +3830,9 @@ Also, dynamic quantization basically only applies to:
 - `nn.RNNCell`
 - `nn.GRUCell`
 
-This means that the example needs a layer from this list to make sense.
+This means that the example needs a layer from this list to make sense, so only the Linear layers will get quantized
+
+
 
 ```python
 # model imports
@@ -3714,80 +3844,6 @@ from torch.ao.quantization.observer import PlaceholderObserver, MovingAveragePer
 import torchvision
 from torchvision import datasets
 from torchvision.transforms import v2 as transformsv2
-
-## Load datasets
-batch_size = 64
-transform=transformsv2.Compose([
-        transformsv2.ToTensor(),
-        transformsv2.Normalize((0.1307,), (0.3081,)),
-        transformsv2.RGB(),
-        ])
-dataset1 = datasets.MNIST(
-    '../data',
-    train=True,
-    download=True,
-    transform=transform,
-    )
-dataset2 = datasets.MNIST(
-    '../data',
-    train=False,
-    transform=transform,
-    )
-train_loader = torch.utils.data.DataLoader(dataset1, batch_size=batch_size)
-test_loader = torch.utils.data.DataLoader(dataset2, batch_size=batch_size)
-
-
-class ExampleModel(torch.nn.Module):
-    '''
-    Expects mnist input of shape (batch,3,28,28)
-    '''
-    def __init__(self):
-        super().__init__()
-        self.quant = torch.ao.quantization.QuantStub()
-        self.dequant = torch.ao.quantization.DeQuantStub()
-        self.conv = torch.nn.Conv2d(3,10,1,1)
-        # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
-        # not supported once quantized, so replace with manual MaxPool2d
-        self.pool = torch.nn.MaxPool2d(28,28)
-        self.fc = torch.nn.Linear(10, 10)
-    def forward(self,x):
-        x = self.quant(x)
-        x = self.conv(x)
-        x = self.pool(x)
-        x = torch.squeeze(x, dim=(1,2))
-        x = torch.squeeze(x, dim=(1,2))
-        x = self.fc(x)
-        x = self.dequant(x)
-        x = torch.softmax(x,dim=1)
-        x = torch.unsqueeze(x, dim=2)
-        return x
-
-
-model = ExampleModel()
-
-model.qconfig = QConfig(
-    activation=PlaceholderObserver.with_args(
-        dtype=torch.quint8,
-        quant_min=0,
-        quant_max=255,
-        is_dynamic=True,
-        ),
-    weight=MovingAveragePerChannelMinMaxObserver.with_args(
-        dtype=torch.qint8,
-        qscheme=torch.per_channel_symmetric,
-        ),
-    )
-
-print(model)
-'''
-ExampleModel(
-  (quant): QuantStub()
-  (dequant): DeQuantStub()
-  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): Linear(in_features=10, out_features=10, bias=True)
-)
-'''
 
 ## Define training and testing cycles
 def train(
@@ -3806,7 +3862,6 @@ def train(
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        target = target.reshape(-1,1)
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
@@ -3832,29 +3887,184 @@ def test(
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            target = target.reshape(-1,1)
             test_loss += criterion(output, target).item()
             # sum up batch loss
-            pred = torch.argmax(output,dim=1)
+            pred = torch.argmax(output,dim=1,keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
     test_loss /= n_data
     test_percent = 100. * correct / n_data
     print(f'\nTest set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{n_data} ({test_percent:.0f}%)\n')
 
 
-lr = 0.001
-optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,1,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(32)
+        self.act1 = torch.nn.ReLU()
+        # self.pool1 = torch.nn.AdaptiveMaxPool2d((14,14))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool1 = torch.nn.MaxPool2d(2,2)
+        self.conv2 = torch.nn.Conv2d(32,64,1,1)
+        self.bn2 = torch.nn.BatchNorm2d(64)
+        self.act2 = torch.nn.ReLU()
+        # self.pool2 = torch.nn.AdaptiveMaxPool2d((7,7))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool2 = torch.nn.MaxPool2d(2,2)
+        self.fl1 = torch.nn.Flatten(start_dim=1)
+        self.fc1 = torch.nn.Linear(3136, 10)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(10, 10)
+    def forward(self,x):
+        x = self.quant(x)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.act1(x)
+        x = self.pool1(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.act2(x)
+        x = self.pool2(x)
+        x = self.fl1(x)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
+        x = self.dequant(x)
+        return x
+    def fuse_model(self):
+        torch.ao.quantization.fuse_modules(
+            self,
+            ['conv1','bn1','act1'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules(
+            self,
+            ['conv2','bn2','act2'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules(
+            self,
+            ['fc1','fc1act'],
+            inplace=True,
+            )
+
+
+qconfig = QConfig(
+    activation=PlaceholderObserver.with_args(
+        dtype=torch.quint8,
+        quant_min=0,
+        quant_max=255,
+        is_dynamic=True,
+        ),
+    weight=MovingAveragePerChannelMinMaxObserver.with_args(
+        dtype=torch.qint8,
+        qscheme=torch.per_channel_symmetric,
+        ),
+    )
+
+model = ExampleModel()
+model.qconfig = qconfig
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act1): ReLU()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act2): ReLU()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): Linear(in_features=3136, out_features=10, bias=True)
+  (fc1act): ReLU()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
+
+## Load datasets
+batch_size = 64
+transform=transformsv2.Compose([
+        transformsv2.ToTensor(),
+        transformsv2.Normalize((0.1307,), (0.3081,)),
+        ])
+dataset1 = datasets.MNIST(
+    '../data',
+    train=True,
+    download=True,
+    transform=transform,
+    )
+dataset2 = datasets.MNIST(
+    '../data',
+    train=False,
+    transform=transform,
+    )
+train_loader = torch.utils.data.DataLoader(dataset1, batch_size=batch_size)
+test_loader = torch.utils.data.DataLoader(dataset2, batch_size=batch_size)
+
+
+device = 'cuda:0'
+model.to(device)
+lr = 0.9
+optimizer = torch.optim.Adadelta(model.parameters(), lr=lr)
 criterion = torch.nn.CrossEntropyLoss()
-device = 'cpu'
-max_epochs = 3
+max_epochs = 20
+scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    optimizer,
+    max_lr=lr,
+    steps_per_epoch=int(((len(train_loader)-1)//batch_size + 1)),
+    epochs=max_epochs,
+    cycle_momentum=False)
+log_interval = 60
 
 # train float model
 for epoch in range(1, max_epochs + 1):
-    train(model, device, train_loader, optimizer, criterion, epoch)
+    train(model, device, train_loader, optimizer, criterion, epoch, log_interval)
     test(model, device, test_loader, criterion)
+    scheduler.step()
 
-# Test set: Average loss: 0.0361, Accuracy: 1135/10000 (11%)
-# not a good model at all, but an example of the process
+# Test set: Average loss: 0.0053, Accuracy: 8973/10000 (90%)
+# not the best model at all, but an example of the process
+
+
+# fusion is only for eval
+model.eval()
+model.fuse_model()
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): ConvReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=3136, out_features=10, bias=True)
+    (1): ReLU()
+  )
+  (fc1act): Identity()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
 
 # prepare model with observers
 prepared_model = torch.ao.quantization.prepare(model, inplace=False)
@@ -3865,17 +4075,41 @@ ExampleModel(
     (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
   )
   (dequant): DeQuantStub()
-  (conv): Conv2d(
-    3, 10, kernel_size=(1, 1), stride=(1, 1)
+  (conv1): ConvReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
     (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
   )
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): Linear(
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=3136, out_features=10, bias=True)
+    (1): ReLU()
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (fc1act): Identity()
+  (fc2): Linear(
     in_features=10, out_features=10, bias=True
     (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
   )
 )
 '''
+
+# freeze observers for a pre-conversion test
+torch.ao.quantization.fake_quantize.disable_observer(prepared_model)
+test(prepared_model.cpu(), 'cpu', test_loader, criterion)
+# Test set: Average loss: 0.0053, Accuracy: 8973/10000 (90%)
+
 mapping = torch.ao.quantization.quantization_mappings.get_default_dynamic_quant_module_mappings()
 
 import pprint
@@ -3894,24 +4128,38 @@ pprint.pprint(mapping)
  <class 'torch.ao.nn.qat.dynamic.modules.linear.Linear'>: <class 'torch.ao.nn.quantized.dynamic.modules.linear.Linear'>}
 '''
 
+
 quantized_model = torch.ao.quantization.convert(prepared_model, mapping=mapping, inplace=False)
 print(quantized_model)
 '''
 ExampleModel(
   (quant): QuantStub()
   (dequant): DeQuantStub()
-  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (fc): DynamicQuantizedLinear(in_features=10, out_features=10, dtype=torch.qint8, qscheme=torch.per_channel_affine)
+  (conv1): ConvReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): ReLU()
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): DynamicQuantizedLinearReLU(in_features=3136, out_features=10, dtype=torch.qint8, qscheme=torch.per_channel_affine)
+  (fc1act): Identity()
+  (fc2): DynamicQuantizedLinear(in_features=10, out_features=10, dtype=torch.qint8, qscheme=torch.per_channel_affine)
 )
 '''
-test(quantized_model, device, test_loader, criterion)
+test(quantized_model, 'cpu', test_loader, criterion)
 
-# Test set: Average loss: 0.0361, Accuracy: 1135/10000 (11%)
-# not a good model at all, but an example of the process
-# a good float model, when tested with converted quantization loses some accuracy
-# so this might be the lowest possible accuracy or random output.
+# Test set: Average loss: 0.0053, Accuracy: 8973/10000 (90%)
 ```
+
 
 Notice the only changed module is `DynamicQuantizedLinear`
 
@@ -3934,72 +4182,6 @@ import torchvision
 from torchvision import datasets
 from torchvision.transforms import v2 as transformsv2
 
-## Load datasets
-batch_size = 64
-transform=transformsv2.Compose([
-        transformsv2.ToTensor(),
-        transformsv2.Normalize((0.1307,), (0.3081,)),
-        transformsv2.RGB(),
-        ])
-dataset1 = datasets.MNIST(
-    '../data',
-    train=True,
-    download=True,
-    transform=transform,
-    )
-dataset2 = datasets.MNIST(
-    '../data',
-    train=False,
-    transform=transform,
-    )
-train_loader = torch.utils.data.DataLoader(dataset1, batch_size=batch_size)
-test_loader = torch.utils.data.DataLoader(dataset2, batch_size=batch_size)
-
-
-class ExampleModel(torch.nn.Module):
-    '''
-    Expects mnist input of shape (batch,3,28,28)
-    '''
-    def __init__(self):
-        super().__init__()
-        self.quant = torch.ao.quantization.QuantStub()
-        self.dequant = torch.ao.quantization.DeQuantStub()
-        self.conv = torch.nn.Conv2d(3,10,1,1)
-        # self.pool = torch.nn.AdaptiveMaxPool2d((1,1))
-        # not supported once quantized, so replace with manual MaxPool2d
-        self.pool = torch.nn.MaxPool2d(28,28)
-    def forward(self,x):
-        x = self.quant(x)
-        x = self.conv(x)
-        x = self.pool(x)
-        x = torch.squeeze(x, dim=(1,2))
-        x = self.dequant(x)
-        x = torch.softmax(x,dim=1)
-        return x
-
-
-model = ExampleModel()
-
-model.qconfig = QConfig(
-    activation=MovingAverageMinMaxObserver.with_args(
-        dtype=torch.quint8,
-        qscheme=torch.per_tensor_affine,
-        ),
-    weight=MovingAveragePerChannelMinMaxObserver.with_args(
-        dtype=torch.qint8,
-        qscheme=torch.per_channel_symmetric,
-        ),
-    )
-
-print(model)
-'''
-ExampleModel(
-  (quant): QuantStub()
-  (dequant): DeQuantStub()
-  (conv): Conv2d(3, 10, kernel_size=(1, 1), stride=(1, 1))
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-)
-'''
 
 ## Define training and testing cycles
 def train(
@@ -4018,7 +4200,6 @@ def train(
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        target = target.reshape(-1,1)
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
@@ -4044,32 +4225,186 @@ def test(
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            target = target.reshape(-1,1)
             test_loss += criterion(output, target).item()
             # sum up batch loss
-            pred = torch.argmax(output,dim=1)
+            pred = torch.argmax(output,dim=1,keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
     test_loss /= n_data
     test_percent = 100. * correct / n_data
     print(f'\nTest set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{n_data} ({test_percent:.0f}%)\n')
 
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,1,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(32)
+        self.act1 = torch.nn.ReLU()
+        # self.pool1 = torch.nn.AdaptiveMaxPool2d((14,14))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool1 = torch.nn.MaxPool2d(2,2)
+        self.conv2 = torch.nn.Conv2d(32,64,1,1)
+        self.bn2 = torch.nn.BatchNorm2d(64)
+        self.act2 = torch.nn.ReLU()
+        # self.pool2 = torch.nn.AdaptiveMaxPool2d((7,7))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool2 = torch.nn.MaxPool2d(2,2)
+        self.fl1 = torch.nn.Flatten(start_dim=1)
+        self.fc1 = torch.nn.Linear(3136, 10)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(10, 10)
+    def forward(self,x):
+        x = self.quant(x)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.act1(x)
+        x = self.pool1(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.act2(x)
+        x = self.pool2(x)
+        x = self.fl1(x)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
+        x = self.dequant(x)
+        return x
+    def fuse_model(self):
+        torch.ao.quantization.fuse_modules_qat(
+            self,
+            ['conv1','bn1','act1'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules_qat(
+            self,
+            ['conv2','bn2','act2'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules_qat(
+            self,
+            ['fc1','fc1act'],
+            inplace=True,
+            )
 
-lr = 0.001
-optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+qconfig = QConfig(
+    activation=MovingAverageMinMaxObserver.with_args(
+        dtype=torch.quint8,
+        qscheme=torch.per_tensor_affine,
+        ),
+    weight=MovingAveragePerChannelMinMaxObserver.with_args(
+        dtype=torch.qint8,
+        qscheme=torch.per_channel_symmetric,
+        ),
+    )
+
+
+model = ExampleModel()
+model.qconfig = qconfig
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act1): ReLU()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act2): ReLU()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): Linear(in_features=3136, out_features=10, bias=True)
+  (fc1act): ReLU()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
+
+## Load datasets
+batch_size = 64
+transform=transformsv2.Compose([
+        transformsv2.ToTensor(),
+        transformsv2.Normalize((0.1307,), (0.3081,)),
+        ])
+dataset1 = datasets.MNIST(
+    '../data',
+    train=True,
+    download=True,
+    transform=transform,
+    )
+dataset2 = datasets.MNIST(
+    '../data',
+    train=False,
+    transform=transform,
+    )
+train_loader = torch.utils.data.DataLoader(dataset1, batch_size=batch_size)
+test_loader = torch.utils.data.DataLoader(dataset2, batch_size=batch_size)
+
+
+device = 'cuda:0'
+model.to(device)
+lr = 0.9
+optimizer = torch.optim.Adadelta(model.parameters(), lr=lr)
 criterion = torch.nn.CrossEntropyLoss()
-device = 'cpu'
-max_epochs = 3
+max_epochs = 20
+scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    optimizer,
+    max_lr=lr,
+    steps_per_epoch=int(((len(train_loader)-1)//batch_size + 1)),
+    epochs=max_epochs,
+    cycle_momentum=False)
+log_interval = 60
 
 # train float model
 for epoch in range(1, max_epochs + 1):
-    train(model, device, train_loader, optimizer, criterion, epoch)
+    train(model, device, train_loader, optimizer, criterion, epoch, log_interval)
     test(model, device, test_loader, criterion)
+    scheduler.step()
 
-# Test set: Average loss: 0.0361, Accuracy: 1135/10000 (11%)
-# not a good model at all, but an example of the process
+# Test set: Average loss: 0.0057, Accuracy: 8869/10000 (89%)
+# not the best model at all, but an example of the process
+
+# fusion is train mode for QAT
+model.train()
+model.fuse_model()
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): ConvBnReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU()
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvBnReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU()
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=3136, out_features=10, bias=True)
+    (1): ReLU()
+  )
+  (fc1act): Identity()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
+
 
 # prepare model with observers
-prepared_model = torch.ao.quantization.prepare(model, inplace=False)
+prepared_model = torch.ao.quantization.prepare_qat(model, inplace=False)
 print(prepared_model)
 '''
 ExampleModel(
@@ -4077,19 +4412,62 @@ ExampleModel(
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
   (dequant): DeQuantStub()
-  (conv): Conv2d(
-    3, 10, kernel_size=(1, 1), stride=(1, 1)
+  (conv1): ConvBnReLU2d(
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
     (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
   )
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvBnReLU2d(
+    32, 64, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    in_features=3136, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (fc1act): Identity()
+  (fc2): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
 )
 '''
 
+# set parameters for qat
+device = 'cuda:0'
+prepared_model.to(device)
+# small LR to avoid changing the weights much after float model training
+lr = 0.00001
+optimizer = torch.optim.Adadelta(prepared_model.parameters(), lr=lr)
+criterion = torch.nn.CrossEntropyLoss()
+# not as many epochs as the float model, since we are only adjusting weights for quantization
+max_epochs = 5
+scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    optimizer,
+    max_lr=lr,
+    steps_per_epoch=int(((len(train_loader)-1)//batch_size + 1)),
+    epochs=max_epochs,
+    cycle_momentum=False)
+log_interval = 60
+
 # train qat model
 for epoch in range(1, max_epochs + 1):
-    train(prepared_model, device, train_loader, optimizer, criterion, epoch)
+    train(prepared_model, device, train_loader, optimizer, criterion, epoch, log_interval)
     test(prepared_model, device, test_loader, criterion)
 
+# Test set: Average loss: 0.0050, Accuracy: 9030/10000 (90%)
 
 print(prepared_model)
 '''
@@ -4098,41 +4476,188 @@ ExampleModel(
     (activation_post_process): MovingAverageMinMaxObserver(min_val=-0.4242129623889923, max_val=2.821486711502075)
   )
   (dequant): DeQuantStub()
-  (conv): Conv2d(
-    3, 10, kernel_size=(1, 1), stride=(1, 1)
-    (activation_post_process): MovingAverageMinMaxObserver(min_val=-3.053720712661743, max_val=1.0860645771026611)
+  (conv1): ConvBnReLU2d(
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([ 0.9805,  0.9878, -0.9778, -0.9910, -0.9607,  1.0020,  0.9854, -0.9932,
+               0.9920, -1.0192,  0.9573,  0.9959,  1.0661, -0.9587, -0.4509,  0.8841,
+               0.9185,  0.9696, -0.9722, -1.0099,  1.0207, -1.0131,  0.9228,  0.9731,
+              -0.8032, -0.9803, -0.9691,  1.0209, -0.9520,  1.0132,  1.0179, -1.0628],
+             device='cuda:0'), max_val=tensor([ 0.9805,  0.9878, -0.9778, -0.9910, -0.9607,  1.0020,  0.9854, -0.9932,
+               0.9920, -1.0192,  0.9573,  0.9959,  1.0661, -0.9587, -0.4509,  0.8841,
+               0.9185,  0.9696, -0.9722, -1.0099,  1.0207, -1.0131,  0.9228,  0.9731,
+              -0.8032, -0.9803, -0.9691,  1.0209, -0.9520,  1.0132,  1.0179, -1.0628],
+             device='cuda:0')
+    )
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=3.486288547515869)
   )
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvBnReLU2d(
+    32, 64, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-2.1960, -0.2812, -1.7402, -0.8100, -3.3399, -1.0657, -0.1177, -0.6993,
+              -0.2671, -4.9234, -0.5415, -3.2926, -0.1593, -0.3427, -0.4231, -3.2403,
+              -0.7386, -2.6828, -5.1171, -3.6965, -0.2139, -9.6442, -0.3108, -2.1643,
+              -0.7892, -2.2819, -2.0034, -0.4834, -0.3995, -4.6650, -1.5611, -1.3696,
+              -3.9522, -0.3022, -1.5632, -0.4557, -5.8931, -0.4400, -1.2626, -0.5098,
+              -3.3187, -0.3899, -0.4554, -2.8338, -0.4487, -0.2008, -1.1349, -5.3991,
+              -4.4046, -0.4110, -1.2552, -0.5631, -0.3380, -2.7315, -2.2920, -2.1396,
+              -0.4084, -6.2974, -1.1824, -0.1679, -2.1181, -0.8331, -1.1392, -5.4736],
+             device='cuda:0'), max_val=tensor([2.1027, 0.2706, 2.1971, 0.7181, 2.7690, 0.9632, 0.1437, 0.6662, 0.2961,
+              3.6605, 0.5448, 2.8305, 0.1597, 0.3670, 0.4135, 4.4315, 0.7591, 3.2193,
+              4.7957, 4.5160, 0.2183, 8.5344, 0.3707, 2.4349, 1.2237, 2.4649, 2.5588,
+              0.4111, 0.5481, 5.3878, 1.8818, 0.9792, 3.3811, 0.3097, 0.9306, 0.5589,
+              5.2913, 0.3896, 0.8146, 0.8410, 2.5406, 0.2423, 0.4662, 3.2510, 0.4216,
+              0.2331, 0.7295, 5.5472, 3.2039, 0.3767, 1.2058, 0.4847, 0.2246, 2.3556,
+              2.5913, 1.7738, 0.4303, 6.8638, 0.9290, 0.2386, 2.2515, 1.1236, 0.7875,
+              4.1441], device='cuda:0')
+    )
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=7.873152732849121)
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    in_features=3136, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-0.1110, -0.1682, -0.1074, -0.0716, -0.1544, -0.1686, -0.1512, -0.2297,
+              -0.1243, -0.1656], device='cuda:0'), max_val=tensor([0.1568, 0.1229, 0.1314, 0.0929, 0.1936, 0.1594, 0.1684, 0.1468, 0.1751,
+              0.1768], device='cuda:0')
+    )
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=0.0, max_val=52.048946380615234)
+  )
+  (fc1act): Identity()
+  (fc2): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-0.4732, -0.7787, -0.3168, -0.1518, -0.6355, -0.3758, -0.5703, -0.3268,
+              -0.3168, -0.5046], device='cuda:0'), max_val=tensor([0.3203, 0.4310, 0.3799, 0.3980, 0.3096, 0.2491, 0.4260, 0.2836, 0.3210,
+              0.3214], device='cuda:0')
+    )
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=-21.06275177001953, max_val=15.43133544921875)
+  )
 )
 '''
+
+# make copy to avoid modifying the model for convert
+# qat_for_deploy = 
+
+# # ideally, one would use the fuse_qat_bn_post_process() function here
+# # to avoid exporting batch normalization to other backends
+# fuse_qat_bn_post_process(
+#     prepared_model,
+#     qconfig,
+#     device,
+#     update_weight_with_fakequant=False,
+#     keep_w_fake_quant=True)
+# print(prepared_model)
+# '''
+# ExampleModel(
+#   (quant): QuantStub(
+#     (activation_post_process): MovingAverageMinMaxObserver(min_val=-0.4242129623889923, max_val=2.821486711502075)
+#   )
+#   (dequant): DeQuantStub()
+#   (conv1): ConvReLU2d(
+#     1, 32, kernel_size=(1, 1), stride=(1, 1)
+#     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+#       min_val=tensor([ 0.9773,  0.9846, -0.9746, -0.9878, -0.9576,  0.9987,  0.9822, -0.9899,
+#                0.9888, -1.0159,  0.9542,  0.9927,  1.0627, -0.9556, -0.4495,  0.8815,
+#                0.9156,  0.9664, -0.9691, -1.0067,  1.0174, -1.0098,  0.9199,  0.9699,
+#               -0.8006, -0.9771, -0.9660,  1.0176, -0.9489,  1.0099,  1.0146, -1.0593],
+#              device='cuda:0'), max_val=tensor([ 0.9773,  0.9846, -0.9746, -0.9878, -0.9576,  0.9987,  0.9822, -0.9899,
+#                0.9888, -1.0159,  0.9542,  0.9927,  1.0627, -0.9556, -0.4495,  0.8815,
+#                0.9156,  0.9664, -0.9691, -1.0067,  1.0174, -1.0098,  0.9199,  0.9699,
+#               -0.8006, -0.9771, -0.9660,  1.0176, -0.9489,  1.0099,  1.0146, -1.0593],
+#              device='cuda:0')
+#     )
+#   )
+#   (bn1): Identity()
+#   (act1): Identity()
+#   (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+#   (conv2): ConvReLU2d(
+#     32, 64, kernel_size=(1, 1), stride=(1, 1)
+#     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+#       min_val=tensor([-2.2004, -0.2815, -1.7259, -0.8108, -3.3225, -1.0663, -0.1178, -0.6998,
+#               -0.2673, -4.9116, -0.5416, -3.3015, -0.1594, -0.3430, -0.4228, -3.2384,
+#               -0.7388, -2.6793, -5.0133, -3.6836, -0.2141, -9.6123, -0.3111, -2.1644,
+#               -0.7847, -2.2629, -1.9944, -0.4836, -0.3984, -4.6541, -1.5561, -1.3597,
+#               -3.9317, -0.3023, -1.5552, -0.4559, -5.8850, -0.4401, -1.2523, -0.5099,
+#               -3.3166, -0.3899, -0.4554, -2.8402, -0.4490, -0.2010, -1.1246, -5.3832,
+#               -4.3736, -0.4115, -1.2560, -0.5640, -0.3383, -2.7325, -2.2894, -2.1422,
+#               -0.4086, -6.1985, -1.1782, -0.1680, -2.1212, -0.8303, -1.1334, -5.4791],
+#              device='cuda:0'), max_val=tensor([2.1069, 0.2708, 2.1790, 0.7187, 2.7546, 0.9638, 0.1438, 0.6667, 0.2964,
+#               3.6516, 0.5449, 2.8382, 0.1598, 0.3673, 0.4133, 4.4289, 0.7594, 3.2151,
+#               4.6985, 4.5002, 0.2185, 8.5062, 0.3711, 2.4350, 1.2167, 2.4443, 2.5474,
+#               0.4113, 0.5465, 5.3751, 1.8757, 0.9722, 3.3635, 0.3099, 0.9258, 0.5592,
+#               5.2839, 0.3897, 0.8079, 0.8413, 2.5389, 0.2423, 0.4662, 3.2584, 0.4219,
+#               0.2332, 0.7228, 5.5310, 3.1814, 0.3771, 1.2065, 0.4855, 0.2248, 2.3564,
+#               2.5883, 1.7760, 0.4306, 6.7560, 0.9257, 0.2388, 2.2547, 1.1199, 0.7835,
+#               4.1483], device='cuda:0')
+#     )
+#   )
+#   (bn2): Identity()
+#   (act2): Identity()
+#   (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+#   (fl1): Flatten(start_dim=1, end_dim=-1)
+#   (fc1): LinearReLU(
+#     in_features=3136, out_features=10, bias=True
+#     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+#       min_val=tensor([-0.1110, -0.1682, -0.1074, -0.0716, -0.1544, -0.1686, -0.1512, -0.2297,
+#               -0.1243, -0.1656], device='cuda:0'), max_val=tensor([0.1568, 0.1229, 0.1314, 0.0929, 0.1936, 0.1594, 0.1684, 0.1468, 0.1751,
+#               0.1768], device='cuda:0')
+#     )
+#   )
+#   (fc1act): Identity()
+#   (fc2): Linear(
+#     in_features=10, out_features=10, bias=True
+#     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+#       min_val=tensor([-0.4732, -0.7787, -0.3168, -0.1518, -0.6355, -0.3758, -0.5703, -0.3268,
+#               -0.3168, -0.5046], device='cuda:0'), max_val=tensor([0.3203, 0.4310, 0.3799, 0.3980, 0.3096, 0.2491, 0.4260, 0.2836, 0.3210,
+#               0.3214], device='cuda:0')
+#     )
+#   )
+# )
+# '''
 
 # freeze observers for a pre-conversion test
 torch.ao.quantization.fake_quantize.disable_observer(prepared_model)
 test(prepared_model, device, test_loader, criterion)
 
-# Test set: Average loss: 0.0361, Accuracy: 1135/10000 (11%)
-# not a good model at all, but an example of the process
-# a good float model, when tested with fake quantization loses some accuracy
-# so this might be the lowest possible accuracy or random output.
+# Test set: Average loss: 0.0050, Accuracy: 9031/10000 (90%)
 
-quantized_model = torch.ao.quantization.convert(prepared_model, inplace=False)
+# quantize can only do eval and cpu
+quantized_model = torch.ao.quantization.convert(prepared_model.eval().cpu(), inplace=False)
 print(quantized_model)
 '''
 ExampleModel(
   (quant): Quantize(scale=tensor([0.0127]), zero_point=tensor([33]), dtype=torch.quint8)
   (dequant): DeQuantize()
-  (conv): QuantizedConv2d(3, 10, kernel_size=(1, 1), stride=(1, 1), scale=0.01623445190489292, zero_point=188)
-  (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
+  (conv1): QuantizedConvReLU2d(1, 32, kernel_size=(1, 1), stride=(1, 1), scale=0.01362644787877798, zero_point=0)
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): QuantizedConvReLU2d(32, 64, kernel_size=(1, 1), stride=(1, 1), scale=0.030343253165483475, zero_point=0)
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): QuantizedLinearReLU(in_features=3136, out_features=10, scale=0.20409592986106873, zero_point=0, qscheme=torch.per_channel_affine)
+  (fc1act): Identity()
+  (fc2): QuantizedLinear(in_features=10, out_features=10, scale=0.14229224622249603, zero_point=147, qscheme=torch.per_channel_affine)
 )
 '''
-test(quantized_model, device, test_loader, criterion)
+test(quantized_model, 'cpu', test_loader, criterion)
 
-# Test set: Average loss: 0.0361, Accuracy: 1135/10000 (11%)
-# not a good model at all, but an example of the process
-# a good float model, when tested with converted quantization loses some accuracy
-# so this might be the lowest possible accuracy or random output.
+# Test set: Average loss: 0.0051, Accuracy: 9021/10000 (90%)
+
 ```
 
+Technically there should be some loss in accuracy, but since the model is simple and there's not many quantization nodes, there's not any noticeable loss in accuracy in this example.
 
 ##### Eager mode QAT dynamic example
 
@@ -4147,7 +4672,7 @@ For QAT dynamic models, the weights are updated to match the quantization proces
 
 That said, the weights in other operations are updated during training to best match the model with these operations being quantized.
 
-
+<!-- 
 ```python
 # model imports
 import torch
@@ -4347,6 +4872,7 @@ test(quantized_model, device, test_loader, criterion)
 # a good float model, when tested with converted quantization loses some accuracy
 # so this might be the lowest possible accuracy or random output.
 ```
+ -->
 
 ##### FX Graph mode PTQ static example
 
@@ -4360,6 +4886,9 @@ test(quantized_model, device, test_loader, criterion)
 
 
 ##### FX Graph mode QAT static example
+
+
+
 ##### FX Graph mode QAT dynamic example
 
 
