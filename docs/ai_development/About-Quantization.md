@@ -3833,7 +3833,7 @@ Also, dynamic quantization basically only applies to:
 This means that the example needs a layer from this list to make sense, so only the Linear layers will get quantized
 
 
-
+<!-- 
 ```python
 # model imports
 import torch
@@ -4129,7 +4129,11 @@ pprint.pprint(mapping)
 '''
 
 
-quantized_model = torch.ao.quantization.convert(prepared_model, mapping=mapping, inplace=False)
+quantized_model = torch.ao.quantization.convert(
+    prepared_model,
+    mapping=mapping,
+    inplace=False,
+    )
 print(quantized_model)
 '''
 ExampleModel(
@@ -4162,14 +4166,13 @@ test(quantized_model, 'cpu', test_loader, criterion)
 
 
 Notice the only changed module is `DynamicQuantizedLinear`
-
+ -->
+ 
 ##### Eager mode QAT static example
 
 The difference is that we train instead of calibrate just the observers. During the training, the observers will be calibrated as well as the weights being updated.
 
-With both done at the same time, the weights will theoretically approach an optimal value that has less accuracy drop when quantized.
-
-However, the example model has a really low accuracy to begin with, so this is not noticeable in this example.
+With both done at the same time, the weights will theoretically approach an optimal value that has less accuracy drop when quantized. However, since the number of operations is low enough, it might not be as noticeable in this example, since the accuracy drops every time that values are scaled to 8 bits and back.
 
 ```python
 # model imports
@@ -4544,11 +4547,43 @@ ExampleModel(
 )
 '''
 
-# make copy to avoid modifying the model for convert
-# qat_for_deploy = 
+# freeze observers for a pre-conversion test
+torch.ao.quantization.fake_quantize.disable_observer(prepared_model)
+test(prepared_model, device, test_loader, criterion)
+
+# Test set: Average loss: 0.0050, Accuracy: 9031/10000 (90%)
+
+# quantize can only do eval and cpu
+quantized_model = torch.ao.quantization.convert(prepared_model.eval().cpu(), inplace=False)
+print(quantized_model)
+'''
+ExampleModel(
+  (quant): Quantize(scale=tensor([0.0127]), zero_point=tensor([33]), dtype=torch.quint8)
+  (dequant): DeQuantize()
+  (conv1): QuantizedConvReLU2d(1, 32, kernel_size=(1, 1), stride=(1, 1), scale=0.01362644787877798, zero_point=0)
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): QuantizedConvReLU2d(32, 64, kernel_size=(1, 1), stride=(1, 1), scale=0.030343253165483475, zero_point=0)
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): QuantizedLinearReLU(in_features=3136, out_features=10, scale=0.20409592986106873, zero_point=0, qscheme=torch.per_channel_affine)
+  (fc1act): Identity()
+  (fc2): QuantizedLinear(in_features=10, out_features=10, scale=0.14229224622249603, zero_point=147, qscheme=torch.per_channel_affine)
+)
+'''
+test(quantized_model, 'cpu', test_loader, criterion)
+
+# Test set: Average loss: 0.0051, Accuracy: 9021/10000 (90%)
+
 
 # # ideally, one would use the fuse_qat_bn_post_process() function here
 # # to avoid exporting batch normalization to other backends
+# # this uses the observed model and not the quantized one.
+# # the changes are made in place, so a copy should be prepared if
+# # we need to preserve the model for some reason.
 # fuse_qat_bn_post_process(
 #     prepared_model,
 #     qconfig,
@@ -4624,37 +4659,6 @@ ExampleModel(
 # )
 # '''
 
-# freeze observers for a pre-conversion test
-torch.ao.quantization.fake_quantize.disable_observer(prepared_model)
-test(prepared_model, device, test_loader, criterion)
-
-# Test set: Average loss: 0.0050, Accuracy: 9031/10000 (90%)
-
-# quantize can only do eval and cpu
-quantized_model = torch.ao.quantization.convert(prepared_model.eval().cpu(), inplace=False)
-print(quantized_model)
-'''
-ExampleModel(
-  (quant): Quantize(scale=tensor([0.0127]), zero_point=tensor([33]), dtype=torch.quint8)
-  (dequant): DeQuantize()
-  (conv1): QuantizedConvReLU2d(1, 32, kernel_size=(1, 1), stride=(1, 1), scale=0.01362644787877798, zero_point=0)
-  (bn1): Identity()
-  (act1): Identity()
-  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
-  (conv2): QuantizedConvReLU2d(32, 64, kernel_size=(1, 1), stride=(1, 1), scale=0.030343253165483475, zero_point=0)
-  (bn2): Identity()
-  (act2): Identity()
-  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
-  (fl1): Flatten(start_dim=1, end_dim=-1)
-  (fc1): QuantizedLinearReLU(in_features=3136, out_features=10, scale=0.20409592986106873, zero_point=0, qscheme=torch.per_channel_affine)
-  (fc1act): Identity()
-  (fc2): QuantizedLinear(in_features=10, out_features=10, scale=0.14229224622249603, zero_point=147, qscheme=torch.per_channel_affine)
-)
-'''
-test(quantized_model, 'cpu', test_loader, criterion)
-
-# Test set: Average loss: 0.0051, Accuracy: 9021/10000 (90%)
-
 ```
 
 Technically there should be some loss in accuracy, but since the model is simple and there's not many quantization nodes, there's not any noticeable loss in accuracy in this example.
@@ -4671,6 +4675,425 @@ For QAT dynamic models, the weights are updated to match the quantization proces
 - `nn.GRUCell`
 
 That said, the weights in other operations are updated during training to best match the model with these operations being quantized.
+
+Similar to the PTQ example, all we need to do is use `PlaceholderObserver` for the activation qconfig.
+
+
+```python
+# model imports
+import torch
+from torch.utils.data import DataLoader
+from torch.ao.quantization.qconfig import QConfig
+from torch.ao.quantization.observer import PlaceholderObserver, MovingAveragePerChannelMinMaxObserver
+# data imports
+import torchvision
+from torchvision import datasets
+from torchvision.transforms import v2 as transformsv2
+
+
+## Define training and testing cycles
+def train(
+        model,
+        device,
+        train_loader,
+        optimizer,
+        criterion,
+        epoch,
+        log_interval=1,
+        dry_run=False,
+    ):
+    model.train()
+    n_data = len(train_loader.dataset)
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
+        optimizer.zero_grad()
+        output = model(data)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+        if batch_idx % log_interval == 0:
+            item = batch_idx * len(data)
+            item_percent = 100. * batch_idx / len(train_loader)
+            print(f'Train Epoch: {epoch} [{item}/{n_data} ({item_percent:.0f}%)]\tLoss: {loss.item():.6f}')
+            if dry_run:
+                break
+
+
+def test(
+        model,
+        device,
+        test_loader,
+        criterion,
+    ):
+    model.eval()
+    test_loss = 0
+    correct = 0
+    n_data = len(test_loader.dataset)
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            test_loss += criterion(output, target).item()
+            # sum up batch loss
+            pred = torch.argmax(output,dim=1,keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+    test_loss /= n_data
+    test_percent = 100. * correct / n_data
+    print(f'\nTest set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{n_data} ({test_percent:.0f}%)\n')
+
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,1,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(32)
+        self.act1 = torch.nn.ReLU()
+        # self.pool1 = torch.nn.AdaptiveMaxPool2d((14,14))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool1 = torch.nn.MaxPool2d(2,2)
+        self.conv2 = torch.nn.Conv2d(32,64,1,1)
+        self.bn2 = torch.nn.BatchNorm2d(64)
+        self.act2 = torch.nn.ReLU()
+        # self.pool2 = torch.nn.AdaptiveMaxPool2d((7,7))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool2 = torch.nn.MaxPool2d(2,2)
+        self.fl1 = torch.nn.Flatten(start_dim=1)
+        self.fc1 = torch.nn.Linear(3136, 10)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(10, 10)
+    def forward(self,x):
+        x = self.quant(x)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.act1(x)
+        x = self.pool1(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.act2(x)
+        x = self.pool2(x)
+        x = self.fl1(x)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
+        x = self.dequant(x)
+        return x
+    def fuse_model(self):
+        torch.ao.quantization.fuse_modules_qat(
+            self,
+            ['conv1','bn1','act1'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules_qat(
+            self,
+            ['conv2','bn2','act2'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules_qat(
+            self,
+            ['fc1','fc1act'],
+            inplace=True,
+            )
+
+qconfig = QConfig(
+    activation=PlaceholderObserver.with_args(
+        dtype=torch.quint8,
+        quant_min=0,
+        quant_max=255,
+        is_dynamic=True,
+        ),
+    weight=MovingAveragePerChannelMinMaxObserver.with_args(
+        dtype=torch.qint8,
+        qscheme=torch.per_channel_symmetric,
+        ),
+    )
+
+
+model = ExampleModel()
+model.qconfig = qconfig
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act1): ReLU()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act2): ReLU()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): Linear(in_features=3136, out_features=10, bias=True)
+  (fc1act): ReLU()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
+
+## Load datasets
+batch_size = 64
+transform=transformsv2.Compose([
+        transformsv2.ToTensor(),
+        transformsv2.Normalize((0.1307,), (0.3081,)),
+        ])
+dataset1 = datasets.MNIST(
+    '../data',
+    train=True,
+    download=True,
+    transform=transform,
+    )
+dataset2 = datasets.MNIST(
+    '../data',
+    train=False,
+    transform=transform,
+    )
+train_loader = torch.utils.data.DataLoader(dataset1, batch_size=batch_size)
+test_loader = torch.utils.data.DataLoader(dataset2, batch_size=batch_size)
+
+
+device = 'cuda:0'
+model.to(device)
+lr = 0.9
+optimizer = torch.optim.Adadelta(model.parameters(), lr=lr)
+criterion = torch.nn.CrossEntropyLoss()
+max_epochs = 20
+scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    optimizer,
+    max_lr=lr,
+    steps_per_epoch=int(((len(train_loader)-1)//batch_size + 1)),
+    epochs=max_epochs,
+    cycle_momentum=False)
+log_interval = 60
+
+# train float model
+for epoch in range(1, max_epochs + 1):
+    train(model, device, train_loader, optimizer, criterion, epoch, log_interval)
+    test(model, device, test_loader, criterion)
+    scheduler.step()
+
+# Test set: Average loss: 0.0055, Accuracy: 8902/10000 (89%)
+# not the best model at all, but an example of the process
+
+# fusion is train mode for QAT
+model.train()
+model.fuse_model()
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): ConvBnReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU()
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvBnReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU()
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=3136, out_features=10, bias=True)
+    (1): ReLU()
+  )
+  (fc1act): Identity()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
+
+
+# prepare model with observers
+prepared_model = torch.ao.quantization.prepare_qat(model, inplace=False)
+print(prepared_model)
+'''
+ExampleModel(
+  (quant): QuantStub(
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (dequant): DeQuantStub()
+  (conv1): ConvBnReLU2d(
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvBnReLU2d(
+    32, 64, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    in_features=3136, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (fc1act): Identity()
+  (fc2): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+)
+'''
+
+# set parameters for qat
+device = 'cuda:0'
+prepared_model.to(device)
+# small LR to avoid changing the weights much after float model training
+lr = 0.00001
+optimizer = torch.optim.Adadelta(prepared_model.parameters(), lr=lr)
+criterion = torch.nn.CrossEntropyLoss()
+# not as many epochs as the float model, since we are only adjusting weights for quantization
+max_epochs = 5
+scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    optimizer,
+    max_lr=lr,
+    steps_per_epoch=int(((len(train_loader)-1)//batch_size + 1)),
+    epochs=max_epochs,
+    cycle_momentum=False)
+log_interval = 60
+
+# train qat model
+for epoch in range(1, max_epochs + 1):
+    train(prepared_model, device, train_loader, optimizer, criterion, epoch, log_interval)
+    test(prepared_model, device, test_loader, criterion)
+
+# Test set: Average loss: 0.0054, Accuracy: 8902/10000 (89%)
+
+print(prepared_model)
+'''
+ExampleModel(
+  (quant): QuantStub(
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (dequant): DeQuantStub()
+  (conv1): ConvBnReLU2d(
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-1.0025,  0.9403,  0.9482,  0.9904,  1.0110, -0.8829,  0.9963,  1.0019,
+              -0.5958,  0.9874,  0.9551, -1.0222, -0.9845,  0.9488, -1.0277,  1.0758,
+              -0.9780, -0.9822,  0.9897,  0.9316, -1.0315, -0.9269,  1.0198, -1.0238,
+              -1.0722, -0.9903, -1.0296,  0.9975, -0.9546,  0.9405,  0.9925, -0.9579],
+             device='cuda:0'), max_val=tensor([-1.0025,  0.9403,  0.9482,  0.9904,  1.0110, -0.8829,  0.9963,  1.0019,
+              -0.5958,  0.9874,  0.9551, -1.0222, -0.9845,  0.9488, -1.0277,  1.0758,
+              -0.9780, -0.9822,  0.9897,  0.9316, -1.0315, -0.9269,  1.0198, -1.0238,
+              -1.0722, -0.9903, -1.0296,  0.9975, -0.9546,  0.9405,  0.9925, -0.9579],
+             device='cuda:0')
+    )
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvBnReLU2d(
+    32, 64, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-1.3856, -0.3632, -6.0796, -1.1564, -2.1562, -4.5327, -0.9394, -0.2957,
+              -0.1269, -1.9393, -3.2151, -5.3686, -1.4432, -0.5038, -0.9843, -4.3404,
+              -1.3905, -1.2866, -2.2928, -1.5623, -1.4645, -3.8506, -0.5006, -4.9146,
+              -0.3104, -2.3922, -1.0080, -0.4017, -0.4018, -3.3878, -0.5212, -2.1076,
+              -0.4212, -0.4916, -4.4752, -2.8852, -1.5251, -0.3488, -0.5670, -0.2967,
+              -0.4474, -1.0374, -0.5203, -1.9103, -1.3302, -6.5981, -4.0001, -3.1999,
+              -3.7097, -0.8491, -0.9473, -5.6464, -2.2627, -1.1282, -0.8141, -0.9328,
+              -0.4596, -0.2754, -0.6045, -1.1085, -3.8830, -1.6874, -3.6357, -0.2082],
+             device='cuda:0'), max_val=tensor([1.1509, 0.3204, 4.9225, 0.9109, 2.4210, 4.3910, 0.7949, 0.3052, 0.2175,
+              0.9693, 2.5951, 4.1693, 0.9071, 0.4234, 1.6972, 4.3339, 1.1011, 1.5156,
+              2.7386, 0.9378, 1.9516, 4.0971, 0.5569, 5.2382, 0.4646, 1.6964, 0.7529,
+              0.4026, 0.5181, 3.7944, 0.6007, 2.6049, 0.4052, 0.4654, 3.6827, 2.5485,
+              1.6569, 0.3002, 0.5660, 0.3002, 0.4616, 1.0649, 0.5007, 1.9501, 1.5845,
+              6.7631, 3.9907, 2.7264, 3.2565, 0.5201, 1.2652, 4.7917, 2.5533, 1.7330,
+              0.7081, 1.0171, 0.4135, 0.2560, 0.5192, 0.7977, 3.7578, 1.6629, 4.2095,
+              0.2978], device='cuda:0')
+    )
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    in_features=3136, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-0.1452, -0.1149, -0.1644, -0.1290, -0.1142, -0.1783, -0.1097, -0.1367,
+              -0.1597, -0.2077], device='cuda:0'), max_val=tensor([0.2337, 0.1219, 0.2033, 0.1391, 0.1361, 0.1553, 0.1433, 0.1362, 0.1145,
+              0.1061], device='cuda:0')
+    )
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+  (fc1act): Identity()
+  (fc2): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
+      min_val=tensor([-0.4021, -0.5694, -0.4044, -0.3322, -0.4068, -0.2766, -0.6204, -0.3833,
+              -0.4822, -0.3026], device='cuda:0'), max_val=tensor([0.3235, 0.4165, 0.2841, 0.3002, 0.3058, 0.2924, 0.3416, 0.3470, 0.2870,
+              0.4389], device='cuda:0')
+    )
+    (activation_post_process): PlaceholderObserver(dtype=torch.quint8, is_dynamic=True)
+  )
+)
+'''
+
+
+# freeze observers for a pre-conversion test
+torch.ao.quantization.fake_quantize.disable_observer(prepared_model)
+test(prepared_model, device, test_loader, criterion)
+
+# Test set: Average loss: 0.0054, Accuracy: 8902/10000 (89%)
+
+# quantize can only do eval and cpu
+mapping = torch.ao.quantization.quantization_mappings.get_default_dynamic_quant_module_mappings()
+quantized_model = torch.ao.quantization.convert(
+    prepared_model.eval().cpu(),
+    mapping=mapping,
+    inplace=False,
+    )
+print(quantized_model)
+'''
+
+'''
+test(quantized_model, 'cpu', test_loader, criterion)
+
+# Test set: Average loss: 0.0051, Accuracy: 9021/10000 (90%)
+
+
+# ideally, one would use the fuse_qat_bn_post_process() function here
+# to avoid exporting batch normalization to other backends
+# this uses the observed model and not the quantized one.
+# the changes are made in place, so a copy should be prepared if
+# we need to preserve the model for some reason.
+fuse_qat_bn_post_process(
+    prepared_model,
+    qconfig,
+    device,
+    update_weight_with_fakequant=False,
+    keep_w_fake_quant=True)
+print(prepared_model)
+'''
+
+'''
+
+```
 
 <!-- 
 ```python
