@@ -54,7 +54,7 @@ quant_max = 255 # or 127
 z = zero_point
 
 min_value-----------0-------------max_value
-       ??            ??             ??
+       ↓            ↓             ↓
        quant_min----z----quant_max
 
 ```
@@ -74,7 +74,7 @@ quant_max = 127
 zero_point = 0
 
 -max(abs(x))-----------0-------------max(abs(x))
-          ??            ??             ??
+          ↓            ↓             ↓
           quant_min----0----quant_max
 ```
 
@@ -105,7 +105,7 @@ zero_point = round(quant_max - (max(x)/scale))
 z = zero_point
 
 min(x)-----------0-------------max(x)
-    ??            ??             ??
+    ↓            ↓             ↓
     quant_min----z----quant_max
 
 
@@ -113,7 +113,7 @@ dequant_x = (quant_x - zero_point)*scale
 
 
             quant_min----z----quant_max
-            ??            ??             ??
+            ↓            ↓             ↓
 approx_min_x-------------0-------------approx_max_x
 
 approx_min_x ~= min(x)
@@ -139,13 +139,13 @@ scale = (2*(max(abs(x)))) / (quant_max - quant_min)
 zero_point = 0
 
 -max(abs(x))-----------0-------------max(abs(x))
-          ??            ??             ??
+          ↓            ↓             ↓
           quant_min----0----quant_max
 
 dequant_x = quant_x*scale
 
                  quant_min----0----quant_max
-                 ??            ??             ??
+                 ↓            ↓             ↓
 -approx_max_abs_x-------------0-------------approx_max_abs_x
 
 approx_max_abs_x ~= max(abs(x))
@@ -3083,7 +3083,7 @@ zero_point = round(quant_max - (max(x)/scale))
 z = zero_point
 
 min(x)-----------0-------------max(x)
-    ??            ??             ??
+    ↓            ↓             ↓
     quant_min----z----quant_max
 
 
@@ -3091,7 +3091,7 @@ dequant_x = (quant_x - zero_point)*scale
 
 
             quant_min----z----quant_max
-            ??            ??             ??
+            ↓            ↓             ↓
 approx_min_x-------------0-------------approx_max_x
 
 approx_min_x ~= min(x)
@@ -3102,13 +3102,13 @@ relu_clamp_out = dequant_x.clamp(clamp_min, clamp_max)
 quant_relu_clamp_out = round((relu_clamp_out / scale) + zero_point).clamp(quant_min, quant_max)
 
 min(dequant_x)-----clamp_min--0---clamp_max----max(dequant_x)
-            ??           ??     ??     ??          ??
+            ↓           ↓     ↓     ↓          ↓
             quant_min---------z--------quant_max
 
 dequant_relu_clamp_out = (quant_x - zero_point)*scale
 
             quant_min--------------z--------------quant_max
-                   ??       ??       ??       ??       ??
+                   ↓       ↓       ↓       ↓       ↓
 approx_min_dequant_x---clamp_min---0---clamp_max---approx_max_dequant_x
 
 ```
@@ -3127,13 +3127,13 @@ scale = (2*(max(abs(x)))) / (quant_max - quant_min)
 zero_point = 0
 
 -max(abs(x))-----------0-------------max(abs(x))
-          ??            ??             ??
+          ↓            ↓             ↓
           quant_min----0----quant_max
 
 dequant_x = quant_x*scale
 
                  quant_min----0----quant_max
-                 ??            ??             ??
+                 ↓            ↓             ↓
 -approx_max_abs_x-------------0-------------approx_max_abs_x
 
 approx_max_abs_x ~= max(abs(x))
@@ -3143,13 +3143,13 @@ relu_clamp_out = dequant_x.clamp(clamp_min, clamp_max)
 quant_relu_clamp_out = round((relu_clamp_out / scale)).clamp(quant_min, quant_max)
 
 -max(abs(dequant_x))----clamp_min--0---clamp_max----max(abs(dequant_x))
-                   ??         ??     ??     ??          ??
+                   ↓         ↓     ↓     ↓          ↓
                    quant_min-------0--------quant_max
 
 dequant_relu_clamp_out = (quant_x - zero_point)*scale
 
             quant_min--------------0--------------quant_max
-                   ??       ??       ??       ??       ??
+                   ↓       ↓       ↓       ↓       ↓
 approx_min_dequant_x---clamp_min---0---clamp_max---approx_max_dequant_x
 ```
 
@@ -3180,7 +3180,7 @@ new_zero_point = round(quant_max - (new_max/new_scale))
 z = new_zero_point
 
 new_min-----------0-------------new_max
-    ??            ??             ??
+    ↓            ↓             ↓
     quant_min----z----quant_max
 
 
@@ -3188,7 +3188,7 @@ dequant_clamp_x = (quant_clamp_x - new_zero_point)*new_scale
 
 
             quant_min----z----quant_max
-            ??            ??             ??
+            ↓            ↓             ↓
 approx_min_clamp_x-------0------approx_max_clamp_x
 
 approx_min_clamp_x ~= new_min
@@ -3217,13 +3217,13 @@ new_scale = (2*symmetric_new_max) / (quant_max - quant_min)
 zero_point = 0
 
 -symmetric_new_max-----0-----symmetric_new_max
-          ??            ??             ??
+          ↓            ↓             ↓
           quant_min----0----quant_max
 
 dequant_clamp_x = quant_clamp_x*new_scale
 
                  quant_min----0----quant_max
-                 ??            ??             ??
+                 ↓            ↓             ↓
 -approx_max_abs_clamp_x-------0-------approx_max_abs_clamp_x
 
 approx_max_abs_clamp_x ~= max(abs(x))
