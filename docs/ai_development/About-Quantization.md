@@ -19,6 +19,7 @@ TODO:
 This guide uses a particular style for code blocks for conveying relevant information before entering commands.
 
 For code blocks intended for showing commands entered in an interactive environment:
+
 ````
 ```language
 <comment> @ <environment>::<sub environment>::path
@@ -28,6 +29,7 @@ For code blocks intended for showing commands entered in an interactive environm
 ````
 
 Similarly, for files, I like to at least add the file location before showing the contents:
+
 ````
 ```language
 <comment> @ path
@@ -632,6 +634,8 @@ Sources:
 - [Pytorch torch.export Tutorial](https://pytorch.org/tutorials/intermediate/torch_export_tutorial.html)
 - [Pytorch API docs: TorchDynamo APIs for fine-grained tracing](https://pytorch.org/docs/stable/torch.compiler_fine_grain_apis.html)
 - [Pytorch API docs: torch.export IRs: Core Aten IR](https://pytorch.org/docs/stable/torch.compiler_ir.html#core-aten-ir)
+- https://pytorch.org/tutorials/prototype/pt2e_quant_ptq.html
+- https://pytorch.org/tutorials/prototype/pt2e_quant_qat.html
 
 With the introduction of torch version 2, the [`torch.export`](https://pytorch.org/docs/stable/export.html),  functionality was added.
 
@@ -717,6 +721,21 @@ def forward(self, x):
 # To see more debug info, please use `graph_module.print_readable()`
 '''
 ```
+
+Now, for training with this exported model, or use within pytorch, it's necessary to use an alternate exporting method.
+
+
+```python
+example_inputs = (torch.rand(2, 3, 224, 224),)
+# for pytorch 2.5+
+exported_model = torch.export.export_for_training(float_model, example_inputs).module()
+# for pytorch 2.4 and before
+# from torch._export import capture_pre_autograd_graph
+# exported_model = capture_pre_autograd_graph(model_to_quantize, example_inputs)
+```
+
+Also, for PT2E models, there is no `model.train()` or `model.eval()`, and instead we must call a different method. Instead we must call `torch.ao.quantization.move_exported_model_to_train(model)` or `torch.ao.quantization.move_exported_model_to_eval(model)`.
+
 
 #### Quantization Configuration
 
@@ -2448,7 +2467,29 @@ def get_openvino_backend_config_dict():
 ```
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #### Quantization Methods and model refactoring
+
 
 In progress...
 
@@ -2475,6 +2516,21 @@ In progress...
 ###### torch.export and TorchDynamo/torch.compile traceability refactoring
 
 In progress...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #### FX Graph mode: Backend specific post processing
 
@@ -7527,6 +7583,28 @@ def forward(self, x):
 test(pt2e_quantized_model, 'cpu', test_loader, criterion)
 # Test set: Average loss: 0.0049, Accuracy: 9074/10000 (91%)
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
