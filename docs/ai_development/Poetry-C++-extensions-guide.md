@@ -2,6 +2,8 @@
 
 This guide is under development
 
+- References :https://github.com/python-poetry/poetry/issues/8460
+
 Because poetry is still under development, some of this information is hidden in issues or discussions, but I've successfully built projects with dependencies that rely on source built extensions, or that the project itself relies on them. I will document here some examples as a sort of guide for future me, as well as other people to configure their projects.
 
 TODO:
@@ -13,7 +15,6 @@ TODO:
 - [ ] CUDA 12.1 (CTranslate2 now supports too) repos install methods
 - [ ] Write about not updating to CUDA 12 too fast because of specific repositories not supporting it yet.
 - [ ] Dockerfile examples
-- [ ] Add style guide for location comments
 
 ```
 cd (project with c depends)

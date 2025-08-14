@@ -1,80 +1,12 @@
 # Web development setup
 
-TODO:
-- [ ] Add style guide for location comments
-- [ ] Re-check old narrative
-- [X] Check all syntax highlights and location comments
-- [ ] Wrap all links
-- [ ] Write about Python FastAPI to replace old Flask docs
-- [ ] type hint inherits
-    - [ ] https://stackoverflow.com/questions/73705069/how-to-type-hint-kwargs-when-they-are-passed-as-is-to-another-function
-    - [ ] `from typing import get_type_hints()`
-- [ ] 
+There are 3 types of web development tools I talk about in here.
 
-## nodenv for Node.js tools
+- Ruby, Bundler and Jekyll for static websites I write for myself in pure HTML and CSS
+- Node.js tools for front end running (usually developed by someone else in my team)
+- FastAPI for running AI input and output in an interface.
 
-Sources:
-- [nodenv](https://github.com/nodenv/nodenv)
-
-[nodenv](https://github.com/nodenv/nodenv) allows you to install isolated Node.js environments.
-
-I mainly don't do front end development or use Node.js at all for my personal projects, but nodenv allows me to install other JS based tools I've found useful, like [Mermaid](https://mermaid.js.org/).
-
-Follow the [github based installation](https://github.com/nodenv/nodenv?tab=readme-ov-file#basic-github-checkout).
-
-```sh
-# @ shell(linux/mac_osx/wsl)
-
-git clone --depth=1 https://github.com/nodenv/nodenv.git ~/.nodenv
-cd ~/.nodenv && src/configure && make -C src
-echo '' >> ~/.bash_profile
-echo '# Install nodenv to ~/.nodenv' >> ~/.bash_profile
-echo 'export PATH="$HOME/.nodenv/bin:$PATH"' >> ~/.bash_profile
-~/.nodenv/bin/nodenv init
-echo 'eval "$(nodenv init - bash)"' >> ~/.bash_profile
-source ~/.bash_profile
-cd ~
-```
-
-Add the `node-build` package that makes the installation actually possible with nodenv (no idea why it is not included)
-
-```sh
-# @ shell(linux/mac_osx/wsl)
-
-git clone --depth=1 https://github.com/nodenv/node-build.git "$(nodenv root)"/plugins/node-build
-```
-
-Now install the latest version (I'm not knowledgeable enough about compatibility issues yet to determine if older versions are better)
-```sh
-# @ shell(linux/mac_osx/wsl)
-
-nodenv install -l
-```
-
-At the time of writing (2024-09-07):
-
-```sh
-# @ shell(linux/mac_osx/wsl)
-nodenv install 22.8.0
-nodenv global 22.8.0
-```
-
-Test if the `npm` commands work:
-```sh
-# @ shell(linux/mac_osx/wsl)
-npm -h
-
-```
-
-## Mermaid CLI
-
-There's a Node.js command line tool called [`mermaid-cli`](https://github.com/mermaid-js/mermaid-cli) which is necessary for the Mermaid Sublime plugin. However, I ran into dependency issues.
-
-```
-npm warn deprecated puppeteer@19.11.1: < 22.8.2 is no longer supported
-```
-
-There's already a [pull request fixing this](https://github.com/mermaid-js/mermaid-cli/pull/739), but hasn't been merged at the time of writing this (2024-09-07)
+However that last one needs only python setup.
 
 ## Ruby, Bundler and Jekyll for static websites
 
@@ -193,9 +125,8 @@ gem install --user-install bundler jekyll jekyll-sitemap
 
 Check if installed properly `jekyll -v` on cmd or git bash.
 
-Now it's installed! I'll be using this for local websites, but we're going to follow a tutorial on how to make Jekyll Github Pages, so even though we're not using GitHub, give this a read.
+Now it's installed! I'll be using this for local websites, but we're going to follow a tutorial on how to make Jekyll Github Pages, so even though we're not using GitHub, give [this](https://docs.github.com/en/pages/setting-up-a-github-pages-site-with-jekyll) a read.
 
-https://docs.github.com/en/pages/setting-up-a-github-pages-site-with-jekyll
 
 Make a new repository for your website on local git.
 
@@ -204,7 +135,7 @@ Now, once you have your webiste repository and you're ready to test the jekyll s
 ```sh
 # @ shell(linux/mac_osx/wsl)
 
-cd (your_repository_here)
+cd #(your_repository_here)
 bundle init
 bundle add jekyll
 bundle add jekyll-sitemap
@@ -212,9 +143,8 @@ bundle add webrick
 ```
 
 And then all that's left to do is to serve the website with jekyll!
-Also for the sitemaps make sure to check this tutorial:
+Also for the sitemaps make sure to check [this tutorial](https://github.com/jekyll/jekyll-sitemap)
 
-https://github.com/jekyll/jekyll-sitemap
 
 And add this to your `_config.yml`
 ```yml
@@ -255,3 +185,90 @@ a       @       185.199.110.153         600 seconds
 a       @       185.199.111.153         600 seconds
 cname   www     your-username.github.io 600 seconds   
 ```
+
+
+## nodenv for Node.js tools
+
+Sources:
+- [nodenv](https://github.com/nodenv/nodenv)
+
+[nodenv](https://github.com/nodenv/nodenv) allows you to install isolated Node.js environments.
+
+I mainly don't do front end development or use Node.js at all for my personal projects, but nodenv allows me to install other JS based tools I've found useful, like [Mermaid](https://mermaid.js.org/).
+
+Follow the [github based installation](https://github.com/nodenv/nodenv?tab=readme-ov-file#basic-github-checkout).
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+git clone --depth=1 https://github.com/nodenv/nodenv.git ~/.nodenv
+cd ~/.nodenv && src/configure && make -C src
+echo '' >> ~/.bash_profile
+echo '# Install nodenv to ~/.nodenv' >> ~/.bash_profile
+echo 'export PATH="$HOME/.nodenv/bin:$PATH"' >> ~/.bash_profile
+~/.nodenv/bin/nodenv init
+echo 'eval "$(nodenv init - bash)"' >> ~/.bash_profile
+source ~/.bash_profile
+cd ~
+```
+
+Add the `node-build` package that makes the installation actually possible with nodenv (no idea why it is not included)
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+git clone --depth=1 https://github.com/nodenv/node-build.git "$(nodenv root)"/plugins/node-build
+```
+
+Now install the latest version (I'm not knowledgeable enough about compatibility issues yet to determine if older versions are better)
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+nodenv install -l
+```
+
+At the time of writing (2024-09-07):
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+nodenv install 22.8.0
+nodenv global 22.8.0
+```
+
+Test if the `npm` commands work:
+```sh
+# @ shell(linux/mac_osx/wsl)
+npm -h
+
+```
+
+## Mermaid CLI
+
+There's a Node.js command line tool called [`mermaid-cli`](https://github.com/mermaid-js/mermaid-cli) which is necessary for the [Mermaid Sublime](https://packagecontrol.io/packages/Mermaid) plugin, which was discussed in the [Suggested tools and setup: Mermaid for Markdown code block graphs and diagrams](./Suggested-Tools-and-Setup.md#Mermaid-for-Markdown-code-block-graphs-and-diagrams).
+
+```sh
+# @ shell(linux/mac_osx/wsl)
+
+npm install -g @mermaid-js/mermaid-cli
+```
+
+## FastAPI
+
+[FastAPI](https://fastapi.tiangolo.com/) is a set of tools to setup a quick web interface for your running program. 
+
+In general it's not hard to setup this. If you have [Poetry and python set up like I explained](./Python-Setup.md), it should be as easy as:
+
+```sh
+# @ shell::poetry_project_here::/.../project_dir
+
+poetry add fastapi
+
+```
+
+See a usage tutorial [here](https://fastapi.tiangolo.com/tutorial/#run-the-code).
+
+I have planned to add an example of using FastAPI for AI model inputs for text prompts or voice recognition [in the Web Development and AI APIs guide](../Web-Development-and-API.md), but it is under construction.
+
+-------
+
+That's it for now.

@@ -1,7 +1,6 @@
 # Git setup guide
 
 TODO:
-- [ ] Add style guide for location comments
 - [ ] Update "Manage multiple accounts" section with newer knowledge
 - [ ] Check all syntax highlights and location comments
 - [ ] Wrap all links
@@ -20,11 +19,10 @@ First install git according to your OS.
 Use Git Bash as described in the [Windows setup document](./Windows-Setup.md#install-git-bash)
 
 
-I followed this guide for using git on Windows:<br>
-https://www.pluralsight.com/guides/using-git-and-github-on-windows
+I followed [this guide](https://www.pluralsight.com/guides/using-git-and-github-on-windows) for using git on Windows
 
-Download and Install from: <br>
-https://git-scm.com/download/win
+
+Download and Install from: [https://git-scm.com/download/win](https://git-scm.com/download/win)
 
 
 ### Git on MacOSX

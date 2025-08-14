@@ -66,15 +66,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# install pyenv and python 3.11.10
+# install pyenv and python 3.11.13
 # as of 2024-09, pytorch supports 3.12 but tensorflow seems to have some issues
 # https://github.com/tensorflow/tensorflow/issues/62003
 RUN git clone --depth=1 https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT="${HOME}/.pyenv"
 ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${PATH}"
 
-RUN pyenv install 3.11.10
-RUN pyenv global 3.11.10
+RUN pyenv install 3.11.13
+RUN pyenv global 3.11.13
 RUN pyenv rehash
 
 # Install poetry with pipx

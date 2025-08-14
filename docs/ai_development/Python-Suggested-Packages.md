@@ -5,7 +5,6 @@ This section needs heavy editing, after years, some of the libraries are not rec
 !!!!!!!!!!!!
 
 TODO:
-- [ ] Add style guide for location comments
 - [ ] Update all python package suggestions (pretty outdated)
     - [ ] Add pyaudio stuff because it was complicated.
 

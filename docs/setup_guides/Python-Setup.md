@@ -1,8 +1,5 @@
 # Python Setup
 
-TODO:
-- [ ] Add style guide for location comments
-
 ## pyenv / pyenv-win
 
 [Pyenv](https://github.com/pyenv/pyenv) is a Python version manager that allows you to isolate different installations of python in the same system. It also makes it easy to uninstall without unintended consequences when you need to start from fresh for whatever reason.
@@ -97,7 +94,7 @@ RUN apt update; \
         ; \
     rm -rf /var/lib/apt/lists/*
 
-# install pyenv and python 3.11.10
+# install pyenv and python 3.11.13
 # as of 2024-09, pytorch supports 3.12 but tensorflow seems to have some issues
 # https://github.com/tensorflow/tensorflow/issues/62003
 RUN git clone --depth=1 https://github.com/pyenv/pyenv.git .pyenv
@@ -390,7 +387,7 @@ poetry new project-name-here
 cd project-name-here
 ```
 
-Then, instead of using `pip install` or `pip uninstall` we use `poetry add`
+Then, instead of using `pip install` or `pip uninstall` we use `poetry add`. For example, adding the library `numpy` would look like:
 
 ```sh
 # @ shell(linux/mac_osx/wsl)
@@ -415,7 +412,7 @@ That's why I prefer to have two images: a development image, and a deploy image.
 
 The development image can be as heavy as needed, but the deploy image should be lightweight for ease of installing and resource efficiency for the users.
 
-For this, I recommend a multi stage Dockerfile, where the first images build the poetry environment, and then use the `poetry-plugin-export` plugin to obtain a `requirements.txt` file with all our specifications, which we can then use on the final stage of the Dockerfile.
+For the deployment image, I recommend a multi stage Dockerfile, where the first images build the poetry environment, and then use the `poetry-plugin-export` plugin to obtain a `requirements.txt` file with all our specifications, which we can then use on the final stage of the Dockerfile.
 
 ```Dockerfile
 # Generate workable requirements.txt from Poetry dependencies 
@@ -451,9 +448,9 @@ Ever since [PEP 518](https://peps.python.org/pep-0518/), accompanied by [PEP 517
 
 Some package management tools like Poetry described above, can handle most of the file automatically and not all of it needs to be edited manually.
 
-However, some details remain to be automated with `poetry ` commands. 
+However, some details remain to be automated with `poetry ` commands (as of the time of writing 2025-08), mainly because some of it is [not officially supported](https://github.com/python-poetry/poetry/issues/8460). Although this is mostly necessary with libraries that use C extensions for python and is rare, a lot of AI libraries actually need C extensions.
 
-This is trivial in a local environment where we can open a file and edit it directly, but for automatic poetry environment building in Dockerfiles, for example, I try to automate these edits in a way that doesn't imply me having to remember which lines to edit.
+Editing this is trivial in a local environment where we can open a file and edit it directly, but for automatic poetry environment building in Dockerfiles, for example, I try to automate these edits in a way that doesn't imply me having to remember which lines to edit.
 
 For those cases I like using [toml-cli](https://github.com/gnprice/toml-cli), which although not complete, has allowed me to build C dependency projects using poetry inside Docker images.
 

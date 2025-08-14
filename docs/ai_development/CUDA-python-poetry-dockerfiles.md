@@ -1,8 +1,12 @@
 # CUDA Python Poetry Dockerfiles
 
 TODO:
-- [ ] Add style guide for location comments
 - [ ] Add explanation of dockerfiles in env_build/dockerfiles
+- [ ] Explain more about container exec without kill exit and lost detaching vs re-attachable with kill exit containers
+- [ ] Explain that the base images I offer are for libraries that don't need any additional C extensions but can use CUDA
+    - [ ] Explain why I wrote each part of this file
+- [ ] Link to [Poetry C++ extensions guide](./Poetry-C++-extensions-guide.md) to explain how to build with CUDA for specific libraries even if they don't use poetry
+- [ ] Add DeepSeek guide
 
 ## Why poetry in docker?
 
@@ -18,17 +22,17 @@ TODO:
 
 Follow the guides to install docker depending on the operating system.
 
-- [Windows / WSL]()
-- [Mac OS X]()
-- [Linux]()
+- [Windows / WSL](../setup_guides/Windows-Setup.md#Install-Docker-Desktop-for-Windows)
+- [Mac OS X](../setup_guides/MacOS-Setup.md#Install-Docker-Desktop-for-Mac)
+- [Linux](../setup_guides/Linux-WSL-Setup.md#Install-Docker-Engine-for-Linux)
 
 ### Pull the base images
 
-For CUDA 12.1 (best pytorch match):
+For CUDA 12.9 (best pytorch match):
 ```sh
 # @ shell(linux/mac_osx/wsl)
 
-docker pull nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+docker pull nvidia/cuda:12.9.1-cudnn-devel-ubuntu22.04
 ```
 
 For CUDA 11.8 (rare dependency incompatibilities):
@@ -42,29 +46,26 @@ For more details on pytorch pre-cuda-12 and the specifics of installation with p
 
 ## Prepare a Dockerfile with the needed dependencies
 
-Under construction.
+*Under construction*
 
-TODO:
-- [ ] Explain that the base images I offer are for libraries that don't need any additional C extensions but can use CUDA
-    - [ ] Explain why I wrote each part of this file
-- [ ] Link to [Poetry C++ extensions guide](./Poetry-C++-extensions-guide.md) to explain how to build with CUDA for specific libraries even if they don't use poetry
+
 
 ## Build instructions
 
 
-For CUDA 12.1 (cudnn 8):
+For CUDA 12.9 (cudnn 9.10):
 
 ```sh
 # @ shell(linux/mac_osx/wsl)::/.../ai_python_dev_reference
 
-docker build --file ./env_build/dockerfiles/poetry_python_-_3-11_cuda12-1.dockerfile --tag poetry_python:3.11_cuda12.1_cudnn8 .
+docker build --file ./env_build/dockerfiles/poetry_python_-_3-11_cuda12-9.dockerfile --tag poetry_python:3.11_cuda12.9_cudnn .
 ```
 
-For CUDA 12.1 (cudnn 8) with computer vision and audio dependencies
+For CUDA 12.9 (cudnn 9.10) with computer vision and audio dependencies
 ```sh
 # @ shell(linux/mac_osx/wsl)::/.../ai_python_dev_reference
 
-docker build --file ./env_build/dockerfiles/poetry_python_-_3-11_cuda12-1_cv-builds.dockerfile --tag poetry_python:3.11_cuda12.1_cudnn8_cv-builds .
+docker build --file ./env_build/dockerfiles/poetry_python_-_3-11_cuda12-9_cv-builds.dockerfile --tag poetry_python:3.11_cuda12.9_cudnn_cv-builds .
 ```
 
 
@@ -99,7 +100,7 @@ For `docker run`:
 - `--gpus all`: Gives access to all GPUs available. Restrict as needed.
 - `--volume ${PWD%/*}:/v`: The parent directory from our current location is expressed by `${PWD%/*}`. This gives access to the container to our current project and others in the same parent directory, in case we need to create other poetry projects with the same container.
 - `--name ai_dev_example`: Name of the container. Use what you like.
-- `poetry_python:3.11_cuda12.1_cudnn8_cv-builds`: Name of the image we will use. Use whichever you need from the ones built above.
+- `poetry_python:3.11_cuda12.9_cudnn8_cv-builds`: Name of the image we will use. Use whichever you need from the ones built above.
 - `bash`: Starts a login shell on top of the shell made by the image.
 
 For more details, check the [docker run documentation](https://docs.docker.com/reference/cli/docker/container/run/)
@@ -117,7 +118,7 @@ docker run \
     --gpus all \
     --volume ${PWD%/*}:/v \
     --name ai_dev_example \
-    poetry_python:3.11_cuda12.1_cudnn8_cv-builds \
+    poetry_python:3.11_cuda12.9_cudnn8_cv-builds \
     bash
 ```
 
@@ -162,8 +163,7 @@ USER $USERNAME
 
 ### Attach to container
 
-TODO:
-- [ ] Explain more about container exec without kill exit and lost detaching vs re-attachable with kill exit containers
+*Under construction*
 
 Start a non-re-attachable bash instance (which won't terminate the container if you `exit`). If detached with `CTRL+P+Q`, it will keep running, but we won't have access to the tty again.
 

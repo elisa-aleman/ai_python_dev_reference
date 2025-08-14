@@ -1,4 +1,4 @@
-FROM python:3.11.10-bookworm
+FROM python:3.11.13-bookworm
 
 ENV HOME="/root"
 WORKDIR /root/workspace

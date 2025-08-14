@@ -1,11 +1,5 @@
 # Suggested Tools and Setup
 
-This guide is under construction
-
-TODO:
-
-- [ ] Add style guide for location comments
-
 I'm an AI engineer with a PhD and years of experience developing in several languages, but mostly python (most of the AI runs on python and C++). Throughout the years I've accumulated experience using more and more convenient tools, solving issues I never imagined I would have. This guide is both for me and anyone reading this to save themselves some time when starting up either as a new beginner developer or an experienced one who just bought a new computer or did a clean install of their OS and needs to start all over again (happens more often than I'd like to admit).
 
 ## Terminal
@@ -165,9 +159,9 @@ I've seen chatter about newer terminal emulators, like Terminator or Kitty, but 
 
 ## Environment and CLI tools
 
-For python related CLI tools, see [](./Python-Setup.md).
+For python related CLI tools, see [Python Setup](./Python-Setup.md).
 
-For web development specifically, see [](./Web-Development-Setup.md).
+For web development specifically, see [Web Development Setup](./Web-Development-Setup.md).
 
 ## IDE / Editors
 
@@ -450,13 +444,13 @@ graph TD
 
 There's tons of options for different diagrams. My favorite are:
 
-- FLowcharts
+- Flowcharts
 - Sequence Diagrams
 - Class Diagrams
 - Gitgraph Diagram
 - Gantt charts
 
-If you would rather see your work as you write it, there is the `mermaid-cli` and the [Mermaid Sublime Text Plugin](https://packagecontrol.io/packages/Mermaid), ...
+If you would rather see your work as you write it, there is the `mermaid-cli` and the [Mermaid Sublime Text Plugin](https://packagecontrol.io/packages/Mermaid). See details about installing it in the [Web Development Setup:Mermaid CLI](./Web-Development-Setup.md#Mermaid-CLI)
 
 But I would rather just use the [Mermaid Live Editor](https://mermaid.live) since it provides me with the option to get example graphs, export graphs, and most importantly, generate copy-paste links for incompatible graph types.
 
@@ -1054,9 +1048,7 @@ Source:
 
 ### Accessible Color Palettes with Paletton
 
-When designing new things it's important to keep in mind color theory, as well as accessibility for the visually impaired and color blind people, etc. But that's so much time one could spend doing so much else, so here's a tool that can help with that and also visualizing how other people with different ranges of color vision would perceive it. It's called Paletton.
-
-https://paletton.com
+When designing new things it's important to keep in mind color theory, as well as accessibility for the visually impaired and color blind people, etc. But that's so much time one could spend doing so much else, so here's a tool that can help with that and also visualizing how other people with different ranges of color vision would perceive it. It's called [Paletton](https://paletton.com).
 
 
 ### Reading tools for Neurodivergent people

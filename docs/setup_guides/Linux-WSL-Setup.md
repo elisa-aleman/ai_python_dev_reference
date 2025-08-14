@@ -3,7 +3,6 @@
 This guide is under construction
 
 TODO:
-- [ ] Add style guide for location comments
 - [ ] Re-check old narrative
 - [ ] Add comments about proxy?
 - [ ] Check all syntax highlights and location comments
@@ -30,25 +29,28 @@ Refer to my section in [Suggested Tools and Setup: GNU Terminal for Linux](./Sug
 
 ## Basic Settings
 
-Setup root password:
-https://www.cyberciti.biz/faq/how-to-change-root-password-on-macos-unix-using-terminal/
+References:
+- [How to change root password on macos unix using terminal](https://www.cyberciti.biz/faq/how-to-change-root-password-on-macos-unix-using-terminal/)
+- [Ubuntu Shortcuts](https://itsfoss.com/ubuntu-shortcuts/)
 
-```
+Setup root password:
+
+```sh
+# @ shell(mac_osx)
+
 sudo passwd root
 ```
 
-- Set up the screen lock command so you can do it every time you stand up:
-https://itsfoss.com/ubuntu-shortcuts/
-
+- Set up the screen lock command so you can do it every time you stand up (`Super+L` or `Ctrl+Alt+L`)
 - Set up your WiFi connection.
 - For ease of use, make hidden files and file extensions visible.
 
 Hidden files visibility:
 I can't work without seeing hidden files, so in Ubuntu we can do `CTRL+H` and the hidden files will appear. 
 
-To set it as the default:
+To set it as the default [follow this guide](https://help.ubuntu.com/stable/ubuntu-help/nautilus-views.html.en)
 
-https://help.ubuntu.com/stable/ubuntu-help/nautilus-views.html.en
+
 
 ### Install basic apt and apt-get software
 
@@ -78,19 +80,19 @@ sudo apt-get install \
     zlib1g-dev
 ```
 
+Without these, there can sometimes be errors. I include this list here because a lot of the time I would install this and forget, and then struggle with errors when starting from a new machine, or a Docker image.
+
 ### Setup git
 
 Follow the [Git Setup and Customization](./Git-Setup-and-Customization.md) for more details.
 
-## Install Docker Engine for Linux.
+## Install Docker Engine for Linux
 
 Docker allows us to run server apps that share an internal environment separate from the OS.
 
-Follow the following guide for docker.
-https://docs.docker.com/engine/install/
+Follow [the official guide for docker](https://docs.docker.com/engine/install/)
 
-For Ubuntu, specifically, there's this guide:
-https://docs.docker.com/engine/install/ubuntu/
+For Ubuntu, specifically, there's [this guide](https://docs.docker.com/engine/install/ubuntu/).
 
 Reboot after installing.
 
@@ -100,17 +102,11 @@ Follow my [Python setup guide](./Python-Setup.md)
 
 ## CUDA and GPU settings
 
-For a linux server to use an nvidia GPU for calculations instead of the CPU, we need to install CUDA, and for neural networks specifically, cuDNN is also needed.
+For a linux system to use an nvidia GPU for calculations instead of the CPU, we need to install CUDA, and for neural networks specifically, cuDNN is also needed.
 
-1. NVIDIA drivers installation guide:  
-    https://docs.nvidia.com/datacenter/tesla/tesla-installation-notes/index.html
-
-
-2. CUDA Installation guide:  
-    https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
-
-3. cuDNN installation guide:  
-    https://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#download
+1. [NVIDIA drivers installation guide](https://docs.nvidia.com/datacenter/tesla/tesla-installation-notes/index.html)
+2. [CUDA Installation guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
+3. [cuDNN installation guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#download)
 
 If you already have nvidia or cuda tools installed and want to upgrade, you can use these commands before installing the new software:
 

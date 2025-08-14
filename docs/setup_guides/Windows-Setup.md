@@ -1,11 +1,7 @@
 # Windows setup environment for development
 
 TODO:
-- [ ] Add style guide for location comments
-- [ ] Re-check old narrative
-- [ ] Add comments about proxy?
-- [ ] Check all syntax highlights and location comments
-- [ ] Wrap all links
+
 - [ ] propagate relevant parts of suggested tools guide to OS specific guides with links to this main document
 
 I initially used to work on python and Data Science using MacOSX or Ubuntu, so changing to Windows was a confusing experience. Because of this I wrote a guide of everything I did for the initial setup of my computer to start programming.
@@ -71,7 +67,7 @@ Reference:
 
 ### WSL: Paths to directories outside of the Linux environment
 
-If in the above tutorial for separate git accounts, for example, you needed to use paths to locations in the Windows system, you can replace C: with /mnt/c/
+If in the above tutorial for separate git accounts, for example, you needed to use paths to locations in the Windows system, you can replace `C:` with `/mnt/c/`
 
 ### WSL: About .profile and .bash_profile
 
@@ -92,10 +88,14 @@ This can be fixed in a few ways:
 However, the best option is to actually start the WSL software with an initial command that starts bash at startup.
 
 ```cmd
+:: cmd
+
 C:\Windows\system32\wsl.exe -d Ubuntu --exec bash -l
 ```
 
 This way, there's no need to edit the profile files.
+
+Personally, I [added this command to the Windows Terminal profile as explained in "Suggested Tools and Setup: Windows Terminal with Cmder, Git Bash, and WSL profiles"](./Suggested-Tools-and-Setup.md#windows-terminal-with-cmder-git-bash-and-wsl-profiles) for WSL in the `Command line` setting.
 
 ### Linux development guide
 
@@ -115,6 +115,8 @@ This can also cause issues with docker, or any other development environment, so
 `/etc/resolv.conf` needs to have this part not commented. (Alternatively, it could also be added in `/etc/wsl.conf` )
 
 ```
+# /etc/resolv.conf
+
 [network]
 generateResolvConf = false
 ```
@@ -122,6 +124,8 @@ generateResolvConf = false
 Then, using `ipconfig|findstr DNS` to find your base domain, you can add it as well to `/etc/resolv.conf`:
 
 ```
+# /etc/resolv.conf
+
 search <YOUR_DOMAIN>
 nameserver 8.8.8.8
 nameserver 1.1.1.1
@@ -135,8 +139,7 @@ Follow the [Git Setup and Customization](./Git-Setup-and-Customization.md) for m
 
 Docker allows us to run server apps that share an internal environment separate from the OS.
 
-Follow the following guide for docker.
-https://docs.docker.com/desktop/install/windows-install/
+Follow [this official guide for docker](https://docs.docker.com/desktop/install/windows-install/)
 
 Reboot after installing.
 
@@ -166,60 +169,72 @@ If you have a concern about the memory space you can change it in the settings:
 
 Installing rsync is necessary to sync files with a Linux server from a windows machine, which is useful to run big programs like machine learning when that server has a powerful GPU. However, rsync is a Unix command so we have to install it manually to be able to use it with Git Bash.
 
-https://shchae7.medium.com/how-to-use-rsync-on-git-bash-6c6bba6a03ca
+References:
+
+- [How to use rsync on git-bash](https://shchae7.medium.com/how-to-use-rsync-on-git-bash-6c6bba6a03ca)
 
 1. Open Git Bash as administrator
 
 2. Install zstd
 
-```
+```sh
+# @ git-bash::~
+
 mkdir zstd
 cd zstd
 curl -L -O https://github.com/facebook/zstd/releases/download/v1.4.4/zstd-v1.4.4-win64.zip
 unzip zstd-v1.4.4-win64.zip
 echo "alias zstd='~/zstd/zstd.exe'" >> ~/.bashrc
 source ~/.bashrc
+cd
 ```
 
 3. Get rsync.exe
 
-```
-cd
+```sh
+# @ git-bash::~
+
 mkdir rsync
 cd rsync
 curl -L -O https://repo.msys2.org/msys/x86_64/rsync-3.2.3-1-x86_64.pkg.tar.zst
 zstd -d rsync-3.2.3–1-x86_64.pkg.tar.zst
 tar -xvf rsync-3.2.3-1-x86_64.pkg.tar
 cp ./usr/bin/rsync.exe /usr/bin
+cd
 ```
 
 4. Install dependencies
 
-```
-cd
+```sh
+# @ git-bash::~
+
 mkdir libzstd
 cd libzstd
 curl -L -O https://repo.msys2.org/msys/x86_64/libzstd-1.4.8-1-x86_64.pkg.tar.zst
 zstd -d libzstd-1.4.8-1-x86_64.pkg.tar.zst
 tar -xvf libzstd-1.4.8-1-x86_64.pkg.tar
 cp ./usr/bin/msys-zstd-1.dll /usr/bin
+cd
 ```
 
-```
-cd
+```sh
+# @ git-bash::~
+
 mkdir libxxhash
 cd libxxhash
 curl -L -O https://repo.msys2.org/msys/x86_64/libxxhash-0.8.0-1-x86_64.pkg.tar.zst
 zstd -d libxxhash-0.8.0-1-x86_64.pkg.tar.zst
 tar -xvf libxxhash-0.8.0-1-x86_64.pkg.tar
 cp ./usr/bin/msys-xxhash-0.8.0.dll /usr/bin
+cd
 ```
 
 5. Check if rsync is working
 
 On a normal git bash session:
 
-```
+```sh
+# @ git-bash::~
 rsync
 ```
 
@@ -228,6 +243,12 @@ It should output the different options you can use with it.
 ## Install Python
 
 Follow my [Python setup guide](./Python-Setup.md)
+
+## CUDA and GPU settings
+
+For accelerated GPU processing I recommend using WSL and a Docker image that uses CUDA, as described in my [Linux WSL Setup: CUDA and GPU settings guide](./Linux-WSL-Setup.md#CUDA-and-GPU-settings).
+
+For specific examples where I used CUDA compatible images, see my [CUDA python dockerfiles document](../ai_development/CUDA-python-dockerfiles.md)
 
 ---
 

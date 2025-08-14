@@ -12,31 +12,31 @@ Sources:
 
 TODO:
 
+- [ ] Export method conversion
+    - [ ] Eager mode observed to FX observed
+    - [ ] FX float to PT2E float
+    - [ ] FX quantized to PT2E quantized
+        - [ ] FX PTQ to PT2E PTQ
+        - [ ] FX QAT to PT2E QAT
+- [ ] ONNX
+- [ ] Tensorflow / Keras /TFLite
+- [ ] TF float to PTQ
+    - [ ] TF Keras to QAT (tfmot)
+        - [ ] Sequential
+        - [ ] Functional
+- [ ] Backend conversion
+    - [ ] Pytorch float to ONNX float
+    - [ ] ONNX float to Keras float
+    - [ ] Tensorflow / Keras float to Quantized TFLite
+    - [ ] Pytorch quantized to ONNX quantized
+    - [ ] Pytorch observed QAT to ONNX quantized
+    - [ ] Pytorch to TFLite (ai_edge_torch)
+        - [ ] Pytorch float PT2E to TFLite quantized (ai_edge_torch)
+        - [ ] Pytorch quantized PT2E to TFLite quantized (ai_edge_torch)
+        - [ ] Pytorch FX quantized to PT2E to TFLite quantized (ai_edge_torch)
 - [ ] ReLU merge and split share qparams on PT2E
-
-## Style Guide
-
-This guide uses a particular style for code blocks for conveying relevant information before entering commands.
-
-For code blocks intended for showing commands entered in an interactive environment:
-
-````
-```language
-<comment> @ <environment>::<sub environment>::path
-
-<commands>
-```
-````
-
-Similarly, for files, I like to at least add the file location before showing the contents:
-
-````
-```language
-<comment> @ path
-
-<contents>
-```
-````
+- [ ] Add note about `_fuse_fx()` being useful for qat settings to fuse non-Sequence nodes even for ptq
+- [ ] color terminal for docker
 
 
 ## Definition
@@ -631,11 +631,11 @@ This means that sometimes, refactoring is necessary for the model. However, comp
 
 Sources:
 - [Pytorch API docs: torch.export](https://pytorch.org/docs/stable/export.html)
-- [Pytorch torch.export Tutorial](https://pytorch.org/tutorials/intermediate/torch_export_tutorial.html)
+- [Pytorch tutorials: torch.export (Pytorch 2 Export) Tutorial](https://pytorch.org/tutorials/intermediate/torch_export_tutorial.html)
 - [Pytorch API docs: TorchDynamo APIs for fine-grained tracing](https://pytorch.org/docs/stable/torch.compiler_fine_grain_apis.html)
 - [Pytorch API docs: torch.export IRs: Core Aten IR](https://pytorch.org/docs/stable/torch.compiler_ir.html#core-aten-ir)
-- https://pytorch.org/tutorials/prototype/pt2e_quant_ptq.html
-- https://pytorch.org/tutorials/prototype/pt2e_quant_qat.html
+- [Pytorch tutorials: PT2E Quantization PTQ](https://pytorch.org/tutorials/prototype/pt2e_quant_ptq.html)
+- [Pytorch tutorials: PT2E Quantization QAT](https://pytorch.org/tutorials/prototype/pt2e_quant_qat.html)
 
 With the introduction of torch version 2, the [`torch.export`](https://pytorch.org/docs/stable/export.html),  functionality was added.
 
@@ -1230,9 +1230,6 @@ Note that the refactoring being different introduces difficulties that aren't pr
 
 ###### FX Mode Fused Modules
 
-TODO: 
-- [ ] Add note about `_fuse_fx()` being useful for qat settings to fuse non-Sequence nodes even for ptq
-
 ###### FX Mode QConfigMapping
 
 Sources:
@@ -1605,7 +1602,7 @@ However, it should be easy to modify to the latest version if necessary.
 ##### PT2E Quantization Configuration: Quantizer class
 
 - [Pytorch Quantization docs](https://pytorch.org/docs/stable/quantization.html)
-- [Pytorch 2 Export Tutorial](https://pytorch.org/tutorials/intermediate/torch_export_tutorial.html)
+- [Pytorch tutorials: torch.export (Pytorch 2 Export) Tutorial](https://pytorch.org/tutorials/intermediate/torch_export_tutorial.html)
 - [Pytorch 2 Export Quantization Tutorial](https://pytorch.org/tutorials/prototype/quantization_in_pytorch_2_0_export_tutorial.html)
 - [Pytorch 2 Export QAT Tutorial](https://pytorch.org/tutorials/prototype/pt2e_quant_qat.html)
 - [Pytorch 2 torch compile](https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html)
@@ -2467,70 +2464,74 @@ def get_openvino_backend_config_dict():
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #### Quantization Methods and model refactoring
 
+Pytorch models written without quantization in consideration could be quantized without any code changes to the model if they are convertible with PT2E export, or traceable with FX symbolic tracing, but complex models usually need some sort of refactoring to be able to be quantized correctly. I will explain and add reference sources for each quantization mode and the necessary changes in this section.
 
-In progress...
+##### Eager mode: Refactoring for execution
 
-##### Eager Mode
+Sources:
 
-In progress...
+- [Pytorch tutorials: Static Quantization with Eager Mode in PyTorch](https://pytorch.org/tutorials/advanced/static_quantization_tutorial.html#model-architecture)
 
-###### Eager mode refactoring for execution
+I will summarize here, but refer to the example in the source for details.
 
-In progress...
+The following changes need to happen:
 
-##### FX Symbolic Tracing
+- `+`, `-`, `*`, `/` operations need to be replaced with the operations of an instance of `ffunc = torch.ao.nn.quantized.FloatFunctional()` following where possible:
+    - `ffunc.add()`, replacing the subtraction with addition of a negative value.
+    - `ffunc.mul()`, replacing division by scalars with multiplication of their reciprocals, e.g. `ffunc.mul(x, 1/scalar_y)`
+    - Non-scalar divisions need to be kept out of quantization stubs because of their incompatibility with int8 calculations in pytorch.
+- Insert `torch.ao.quantization.QuantStub`, `torch.ao.quantization.DeQuantStub` at the beginning and end of quantizable operations, and leaving unquantizable operations outside of these stubs.
+    - This requires previous knowledge of which functions are compatible and which incompatible, which is advanced knowledge and not recommended to spend time learning when there are other quantization methods available.
+- Replace `torch.nn.ReLU6` with `torch.nn.ReLU`, as well as any other incompatible activation functions, or leave them out of the quantization stubs (which decreases the benefits of quantization).
 
-In progress...
+Notice the source tutorial mentions adding the stubs at the beginning and end of the model, where technically this is only true if the entire model is quantizable.
 
-###### FX Symbolic Tracing Refactoring for traceability
+Because of these time consuming changes and high knowledge requirements, I don't recommend taking this path for quantizing models.
 
-In progress...
+##### FX Symbolic Tracing: Refactoring for traceability
 
-##### PT2E
+Sources:
 
-In progress...
+- [Pytorch tutorials: FX Graph Mode Quantization User Guide](https://pytorch.org/tutorials/prototype/fx_graph_mode_quant_guide.html)
+- [pytorch docs: torch.fx](https://pytorch.org/docs/stable/fx.html)
 
-###### torch.export and TorchDynamo/torch.compile traceability refactoring
+Besides general advice in the given tutorial, there are some things I have learned when refactoring models for fx quantization:
 
-In progress...
+- `@torch.fx.wrap` untraceable functions
+- Factor out untraceable code into functions and `@torch.fx.wrap` them
+- Factor out untraceable methods into functions (not tied to a class) where necessary and `@torch.fx.wrap` them
+- Replace `+` , `-`, and `*` operators with `torch.add()` and `torch.mul`
+- Replace `/` and division by scalar values with `torch.mul` with the reciprocal as an initialization parameter.
+- Parametrize all scalar operation values with `torch.nn.Parameter(scalar_val, requires_grad=False)`
+- Replace `torch.square(x)` with `torch.mul(x,x)`
+- Replace `torch.bmm()` with `torch.matmul()`
+- Replace `@` operators with `torch.matmul()`
+- Where possible, refactor even simple classes with this in mind, for example:
+    - instead of `torch.nn.HardSigmoid`, use `hs_scale = torch.nn.Parameter(torch.Tensor([1/6]), requires_grad=False)` and `hs_transpose = torch.nn.Parameter(torch.Tensor([3]), requires_grad=False)` in the initialization and `torch.mul((x+hs_transpose).clamp(0,6), hs_scale)` in the execution to make HardSigmoid activations quantizeable
+- Wherever an initialization value needs broadcasting, but is otherwise not used for anything else, preemptively use the matching shape from the start where possible
+- Avoid flow control or add specific arguments to consolidate a singular flow of a model when tracing.
+    - This includes some inconspicuous functions like `dict.update()`, which iterate through a dictionary internally.
+- Avoid third party library operations where possible.
+
+Whereas some of these might not be necessary for a successful trace, these replacements will allow for a higher percentage of the model to be quantized than if not, as well as allowing for easier exporting to ONNX or tflite when necessary.
 
 
+##### PT2E: torch.export and TorchDynamo/torch.compile traceability refactoring
 
+Sources:
 
+- [Pytorch tutorials: torch.export (Pytorch 2 Export) Tutorial](https://pytorch.org/tutorials/intermediate/torch_export_tutorial.html)
+- [Pytorch docs: Pytorch Dynamo Overview](https://pytorch.org/docs/stable/torch.compiler_dynamo_overview.html)
+- [Pytorch docs: ExportDB (pt2e compatibility docs)](https://pytorch.org/docs/stable/generated/exportdb/index.html)
+- [Pytorch docs: ATen native operators](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml)
 
+As is written in the sources above, despite torch dynamo being used in the background, the final objective of torch export functionality means that the model must not have graph breaks, or dynamic flow control (if statements dependent on non parametrized values), or rely on third party operators. Because of this, some of the rewriting in the model needs to be done with even more strict measures than in the FX symbolic tracing model refactoring, although most of the tips I mentioned in the previous section will also apply here.
 
+Optional input or keyword arguments are not allowed in the tracing. My recommendation is to first trace a model with FX tracing to consolidate any optional parameters as part of the model itself, and then export that model to PT2E. This will reduce the possibility of untraceable code being present in the model (although not fully eliminate it if there is wrapped code).
 
-
-
-
-
-
-
-
-
+The model must also be possible to be expressed in ATen operators, which means that if there's an incompatibility with ATen operators then the model cannot be traced.
 
 #### FX Graph mode: Backend specific post processing
 
@@ -4076,7 +4077,7 @@ Also, dynamic quantization basically only applies to:
 
 This means that the example needs a layer from this list to make sense, so only the Linear layers will get quantized
 
-
+Also, at the end before converting the model, the mapping for dynamic quantization modules is necessary. This is usually not included in tutorials because it is the default behavior if one chooses to use `torch.ao.quantization.quantize_dynamic()`, which, while useful, does not allow for customization of the observers.
 
 ```python
 # model imports
@@ -5976,10 +5977,9 @@ for epoch in range(1, max_epochs + 1):
 
 
 # FX fuse modules automatically
-# using qat temporarily so we don't need to worry about eval or train
 fused_fx = _fuse_fx(
     copy.deepcopy(traced_fx), # default behavior is in-place
-    is_qat=True, #useful for non Sequence types even if not qat
+    is_qat=True,
     backend_config=None, # default native
     )
 print(fused_fx)
@@ -6167,8 +6167,8 @@ test(quantized_fx, 'cpu', test_loader, criterion)
 
 Sources:
 
-- https://pytorch.org/tutorials/prototype/pt2e_quant_ptq.html
-- https://pytorch.org/tutorials/prototype/pt2e_quant_qat.html
+- [Pytorch tutorials: PT2E Quantization PTQ](https://pytorch.org/tutorials/prototype/pt2e_quant_ptq.html)
+- [Pytorch tutorials: PT2E Quantization QAT](https://pytorch.org/tutorials/prototype/pt2e_quant_qat.html)
 
 
 *\*Note: For PT2E models, there is no `model.train()` or `model.eval()`, and instead we must call a different method. Instead we must call `torch.ao.quantization.move_exported_model_to_train(model)` or `torch.ao.quantization.move_exported_model_to_eval(model)`.*
@@ -6183,6 +6183,8 @@ exported_model = torch.export.export_for_training(float_model, example_inputs).m
 # from torch._export import capture_pre_autograd_graph
 # exported_model = capture_pre_autograd_graph(model_to_quantize, example_inputs)
 ```
+
+
 
 ```python
 import torch
@@ -6671,7 +6673,8 @@ test(pt2e_quantized_model, 'cpu', test_loader, criterion)
 
 ##### PT2E PTQ dynamic example
 
-In progress...
+For the dynamic quantization in PT2E, the difference lies in adding the `PlaceholderObserver` in the right places, and to consider specific compatibility issues for the weight quantization like the `averaging_constant=1` being necessary in `MovingAverageMinMaxObserver` for dynamic quantization.
+
 
 
 ```python
@@ -7610,12 +7613,535 @@ test(pt2e_quantized_model, 'cpu', test_loader, criterion)
 
 #### Export method conversion
 
-In progress...
-
+Let's say that you already have some progress in attempting to quantize a model, (for example, you have a pre-trained QAT model) and would rather not start from the beginning to update to a different quantization method. There are some ways to convert previous methods to the newer ones, but not the other way around. Here I explore some of those options.
 
 ##### Eager mode observed to FX observed
 
-In progress...
+Say, in the case of a QAT eager mode model that needs to be converted to FX symbolic tracing for graph manipulation, it's necessary to trace the pre-observed model, and to also generate a convincing meta dictionary.
+
+
+```python
+# model imports
+import torch
+from torch.utils.data import DataLoader
+from torch.ao.quantization.qconfig import QConfig
+from torch.ao.quantization.observer import MovingAverageMinMaxObserver, MovingAveragePerChannelMinMaxObserver
+
+# data imports
+import torchvision
+from torchvision import datasets
+from torchvision.transforms import v2 as transformsv2
+
+# fx imports
+from torch.ao.quantization.qconfig_mapping import QConfigMapping
+from torch.ao.quantization.fx.tracer import QuantizationTracer
+from torch.fx import GraphModule
+from torch.ao.quantization.quantize_fx import convert_fx
+from torch.ao.quantization.fx import prepare
+
+
+## Define training and testing cycles
+def train(
+        model,
+        device,
+        train_loader,
+        optimizer,
+        criterion,
+        epoch,
+        log_interval=1,
+        dry_run=False,
+    ):
+    model.train()
+    n_data = len(train_loader.dataset)
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
+        optimizer.zero_grad()
+        output = model(data)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+        if batch_idx % log_interval == 0:
+            item = batch_idx * len(data)
+            item_percent = 100. * batch_idx / len(train_loader)
+            print(f'Train Epoch: {epoch} [{item}/{n_data} ({item_percent:.0f}%)]\tLoss: {loss.item():.6f}')
+            if dry_run:
+                break
+
+
+def test(
+        model,
+        device,
+        test_loader,
+        criterion,
+    ):
+    model.eval()
+    test_loss = 0
+    correct = 0
+    n_data = len(test_loader.dataset)
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            test_loss += criterion(output, target).item()
+            # sum up batch loss
+            pred = torch.argmax(output,dim=1,keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+    test_loss /= n_data
+    test_percent = 100. * correct / n_data
+    print(f'\nTest set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{n_data} ({test_percent:.0f}%)\n')
+
+
+## Load datasets
+batch_size = 64
+transform=transformsv2.Compose([
+        transformsv2.ToTensor(),
+        transformsv2.Normalize((0.1307,), (0.3081,)),
+        ])
+dataset1 = datasets.MNIST(
+    '../data',
+    train=True,
+    download=True,
+    transform=transform,
+    )
+dataset2 = datasets.MNIST(
+    '../data',
+    train=False,
+    transform=transform,
+    )
+train_loader = torch.utils.data.DataLoader(dataset1, batch_size=batch_size)
+test_loader = torch.utils.data.DataLoader(dataset2, batch_size=batch_size)
+
+
+
+class ExampleModel(torch.nn.Module):
+    '''
+    Expects mnist input of shape (batch,1,28,28)
+    '''
+    def __init__(self):
+        super().__init__()
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
+        self.conv1 = torch.nn.Conv2d(1,32,1,1)
+        self.bn1 = torch.nn.BatchNorm2d(32)
+        self.act1 = torch.nn.ReLU()
+        # self.pool1 = torch.nn.AdaptiveMaxPool2d((14,14))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool1 = torch.nn.MaxPool2d(2,2)
+        self.conv2 = torch.nn.Conv2d(32,64,1,1)
+        self.bn2 = torch.nn.BatchNorm2d(64)
+        self.act2 = torch.nn.ReLU()
+        # self.pool2 = torch.nn.AdaptiveMaxPool2d((7,7))
+        # not supported once quantized, so replace with manual MaxPool2d
+        self.pool2 = torch.nn.MaxPool2d(2,2)
+        self.fl1 = torch.nn.Flatten(start_dim=1)
+        self.fc1 = torch.nn.Linear(3136, 10)
+        self.fc1act = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(10, 10)
+    def forward(self,x):
+        x = self.quant(x)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.act1(x)
+        x = self.pool1(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.act2(x)
+        x = self.pool2(x)
+        x = self.fl1(x)
+        x = self.fc1(x)
+        x = self.fc1act(x)
+        x = self.fc2(x)
+        x = self.dequant(x)
+        return x
+    def fuse_model(self):
+        torch.ao.quantization.fuse_modules_qat(
+            self,
+            ['conv1','bn1','act1'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules_qat(
+            self,
+            ['conv2','bn2','act2'],
+            inplace=True,
+            )
+        torch.ao.quantization.fuse_modules_qat(
+            self,
+            ['fc1','fc1act'],
+            inplace=True,
+            )
+
+qconfig = QConfig(
+    activation=MovingAverageMinMaxObserver.with_args(
+        dtype=torch.quint8,
+        qscheme=torch.per_tensor_affine,
+        ),
+    weight=MovingAveragePerChannelMinMaxObserver.with_args(
+        dtype=torch.qint8,
+        qscheme=torch.per_channel_symmetric,
+        ),
+    )
+
+
+model = ExampleModel()
+model.qconfig = qconfig
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+  (bn1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act1): ReLU()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act2): ReLU()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): Linear(in_features=3136, out_features=10, bias=True)
+  (fc1act): ReLU()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
+
+# train model
+
+device = 'cuda:0'
+model.to(device)
+lr = 0.9
+optimizer = torch.optim.Adadelta(model.parameters(), lr=lr)
+criterion = torch.nn.CrossEntropyLoss()
+max_epochs = 20
+scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    optimizer,
+    max_lr=lr,
+    steps_per_epoch=int(((len(train_loader)-1)//batch_size + 1)),
+    epochs=max_epochs,
+    cycle_momentum=False)
+log_interval = 60
+
+# train float model
+for epoch in range(1, max_epochs + 1):
+    train(model, device, train_loader, optimizer, criterion, epoch, log_interval)
+    test(model, device, test_loader, criterion)
+    scheduler.step()
+
+# Test set: Average loss: 0.0055, Accuracy: 8898/10000 (89%) 
+
+
+# fuse model 
+# fusion is train mode for QAT
+model.train()
+model.fuse_model()
+print(model)
+'''
+ExampleModel(
+  (quant): QuantStub()
+  (dequant): DeQuantStub()
+  (conv1): ConvBnReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU()
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvBnReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU()
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=3136, out_features=10, bias=True)
+    (1): ReLU()
+  )
+  (fc1act): Identity()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+'''
+
+
+# prepare model with observers
+prepared_model = torch.ao.quantization.prepare_qat(model, inplace=False)
+print(prepared_model)
+'''
+ExampleModel(
+  (quant): QuantStub(
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (dequant): DeQuantStub()
+  (conv1): ConvBnReLU2d(
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvBnReLU2d(
+    32, 64, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    in_features=3136, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+  (fc1act): Identity()
+  (fc2): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+    (activation_post_process): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  )
+)
+'''
+
+# train QAT 
+
+
+# set parameters for qat
+device = 'cuda:0'
+prepared_model.to(device)
+# small LR to avoid changing the weights much after float model training
+lr = 0.00001
+optimizer = torch.optim.Adadelta(prepared_model.parameters(), lr=lr)
+criterion = torch.nn.CrossEntropyLoss()
+# not as many epochs as the float model, since we are only adjusting weights for quantization
+max_epochs = 5
+scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    optimizer,
+    max_lr=lr,
+    steps_per_epoch=int(((len(train_loader)-1)//batch_size + 1)),
+    epochs=max_epochs,
+    cycle_momentum=False)
+log_interval = 60
+
+# train qat model
+for epoch in range(1, max_epochs + 1):
+    train(prepared_model, device, train_loader, optimizer, criterion, epoch, log_interval)
+    test(prepared_model, device, test_loader, criterion)
+
+# Test set: Average loss: 0.0055, Accuracy: 8898/10000 (89%)
+
+#######################
+#######################
+# Convert to FX model #
+#######################
+#######################
+
+
+# FX trace the original, unprepared model
+tracer = QuantizationTracer(skipped_module_names=[], skipped_module_classes=[])
+graph = tracer.trace(model)
+traced_fx = GraphModule(tracer.root, graph, 'ExampleModel')
+print(traced_fx)
+
+'''
+ExampleModel(
+  (conv1): ConvBnReLU2d(
+    (0): Conv2d(1, 32, kernel_size=(1, 1), stride=(1, 1))
+    (1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU()
+  )
+  (bn1): Identity()
+  (act1): Identity()
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): ConvBnReLU2d(
+    (0): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
+    (1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU()
+  )
+  (bn2): Identity()
+  (act2): Identity()
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (fc1): LinearReLU(
+    (0): Linear(in_features=3136, out_features=10, bias=True)
+    (1): ReLU()
+  )
+  (fc1act): Identity()
+  (fc2): Linear(in_features=10, out_features=10, bias=True)
+)
+
+
+
+def forward(self, x):
+    conv1 = self.conv1(x);  x = None
+    bn1 = self.bn1(conv1);  conv1 = None
+    act1 = self.act1(bn1);  bn1 = None
+    pool1 = self.pool1(act1);  act1 = None
+    conv2 = self.conv2(pool1);  pool1 = None
+    bn2 = self.bn2(conv2);  conv2 = None
+    act2 = self.act2(bn2);  bn2 = None
+    pool2 = self.pool2(act2);  act2 = None
+    fl1 = self.fl1(pool2);  pool2 = None
+    fc1 = self.fc1(fl1);  fl1 = None
+    fc1act = self.fc1act(fc1);  fc1 = None
+    fc2 = self.fc2(fc1act);  fc1act = None
+    return fc2
+
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
+# define the qconfig_mapping to match the original QConfig
+qconfig_mapping = QConfigMapping().set_global(
+        QConfig(
+            activation=MovingAverageMinMaxObserver.with_args(
+                dtype=torch.quint8,
+                qscheme=torch.per_tensor_affine,
+                ),
+            weight=MovingAveragePerChannelMinMaxObserver.with_args(
+                dtype=torch.qint8,
+                qscheme=torch.per_channel_symmetric,
+                ),
+            )
+        )
+
+
+# prepare the FX model
+
+# FX prepare the quantization nodes
+example_inputs = (torch.randn(1,1,28,28),)
+prepared_fx = prepare(
+    traced_fx,
+    qconfig_mapping=qconfig_mapping,
+    node_name_to_scope=tracer.node_name_to_scope,
+    is_qat=True, # convenient even if not QAT
+    example_inputs=example_inputs,
+    backend_config=None, # default native
+    )
+
+print(prepared_fx)
+
+'''
+GraphModule(
+  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (conv1): ConvBnReLU2d(
+    1, 32, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+  )
+  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (bn1): Identity()
+  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (act1): Identity()
+  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (conv2): ConvBnReLU2d(
+    32, 64, kernel_size=(1, 1), stride=(1, 1)
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+  )
+  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (bn2): Identity()
+  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (act2): Identity()
+  (activation_post_process_7): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (activation_post_process_8): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (fl1): Flatten(start_dim=1, end_dim=-1)
+  (activation_post_process_9): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (fc1): LinearReLU(
+    in_features=3136, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+  )
+  (activation_post_process_10): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (fc1act): Identity()
+  (activation_post_process_11): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+  (fc2): Linear(
+    in_features=10, out_features=10, bias=True
+    (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(min_val=tensor([], device='cuda:0'), max_val=tensor([], device='cuda:0'))
+  )
+  (activation_post_process_12): MovingAverageMinMaxObserver(min_val=inf, max_val=-inf)
+)
+
+
+
+def forward(self, x):
+    activation_post_process_0 = self.activation_post_process_0(x);  x = None
+    conv1 = self.conv1(activation_post_process_0);  activation_post_process_0 = None
+    activation_post_process_1 = self.activation_post_process_1(conv1);  conv1 = None
+    bn1 = self.bn1(activation_post_process_1);  activation_post_process_1 = None
+    activation_post_process_2 = self.activation_post_process_2(bn1);  bn1 = None
+    act1 = self.act1(activation_post_process_2);  activation_post_process_2 = None
+    activation_post_process_3 = self.activation_post_process_3(act1);  act1 = None
+    pool1 = self.pool1(activation_post_process_3);  activation_post_process_3 = None
+    activation_post_process_4 = self.activation_post_process_4(pool1);  pool1 = None
+    conv2 = self.conv2(activation_post_process_4);  activation_post_process_4 = None
+    activation_post_process_5 = self.activation_post_process_5(conv2);  conv2 = None
+    bn2 = self.bn2(activation_post_process_5);  activation_post_process_5 = None
+    activation_post_process_6 = self.activation_post_process_6(bn2);  bn2 = None
+    act2 = self.act2(activation_post_process_6);  activation_post_process_6 = None
+    activation_post_process_7 = self.activation_post_process_7(act2);  act2 = None
+    pool2 = self.pool2(activation_post_process_7);  activation_post_process_7 = None
+    activation_post_process_8 = self.activation_post_process_8(pool2);  pool2 = None
+    fl1 = self.fl1(activation_post_process_8);  activation_post_process_8 = None
+    activation_post_process_9 = self.activation_post_process_9(fl1);  fl1 = None
+    fc1 = self.fc1(activation_post_process_9);  activation_post_process_9 = None
+    activation_post_process_10 = self.activation_post_process_10(fc1);  fc1 = None
+    fc1act = self.fc1act(activation_post_process_10);  activation_post_process_10 = None
+    activation_post_process_11 = self.activation_post_process_11(fc1act);  fc1act = None
+    fc2 = self.fc2(activation_post_process_11);  activation_post_process_11 = None
+    activation_post_process_12 = self.activation_post_process_12(fc2);  fc2 = None
+    return activation_post_process_12
+
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
+# Loop through prepared_fx.named_modules weights
+# and replace values from eager mode model
+for name, mod in prepared_fx.named_modules():
+    if name.ends_with('weight'):
+        orig_weight = prepared_model
+        for child in name.split("."):
+            orig_weight = getattr(orig_weight, child)
+        fx_weight = prepared_fx
+        for fx_child in name.split(".")[:-1]:
+            fx_weight = getattr(fx, fx_child)
+        setattr(fx_weight, 'weight', orig_weight)
+
+
+# Loop through prepared_fx.named_modules weight_fake_quants
+# and replace values from eager mode model
+for name, mod in prepared_fx.named_modules():
+    if 'weight_fake_quant' in name:
+        orig_weight_fq = prepared_model
+        for child in name.split("."):
+            orig_weight_fq = getattr(orig_weight_fq, child)
+        fx_fq = prepared_fx
+        for fx_child in name.split(".")[:-1]:
+            fx_fq = getattr(fx_fq, fx_child)
+        setattr(fx_fq, 'weight_fake_quant', orig_weight_fq)
+
+
+# Loop through prepared_model.named_modules activation_post_process
+# and check the module they act upon
+# search prepared_fx.graph.nodes for the fake quant acting on the same module
+# and replace
+
+# for name,mod in prepared_model.named_modules():
+# ...     if 'activation_post_process' in name:
+# ...         print(name, mod)
+# ...
+# quant.activation_post_process MovingAverageMinMaxObserver(min_val=-0.4242129623889923, max_val=2.821486711502075)
+# conv1.activation_post_process MovingAverageMinMaxObserver(min_val=0.0, max_val=3.2903220653533936)
+# conv2.activation_post_process MovingAverageMinMaxObserver(min_val=0.0, max_val=7.221811294555664)
+# fc1.activation_post_process MovingAverageMinMaxObserver(min_val=0.0, max_val=30.125938415527344)
+# fc2.activation_post_process MovingAverageMinMaxObserver(min_val=-23.375669479370117, max_val=11.602253913879395)
+
+```
 
 ##### FX float to PT2E float
 

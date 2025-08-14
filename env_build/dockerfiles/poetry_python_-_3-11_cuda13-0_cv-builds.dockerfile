@@ -1,9 +1,10 @@
-FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+# NOTE that as of 2025-08-14 CUDA 13 is not pytorch compatible
+FROM nvidia/cuda:13.0.0-cudnn-runtime-ubuntu22.04
 
-ENV CUDA_INT=121
-ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.1
+ENV CUDA_INT=130
+ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-13.0
 ENV CUDNN_DIR=/opt/cudnn
-ENV CUDACXX=/usr/local/cuda/bin/nvcc-12.1
+ENV CUDACXX=/usr/local/cuda/bin/nvcc-13.0
 
 ENV LD_LIBRARY_PATH=/usr/local/lib64
 ENV LD_LIBRARY_PATH=$CUDA_TOOLKIT_ROOT_DIR/lib64:$CUDNN_DIR/lib64:$LD_LIBRARY_PATH

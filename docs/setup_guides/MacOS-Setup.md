@@ -1,15 +1,6 @@
-
 # Mac Python setup environment for development (on a proxy)
 
-TODO:
-- [ ] Add style guide for location comments
-- [ ] Re-check old narrative
-- [ ] Check all syntax highlights and location comments
-- [ ] Wrap all links
-- [ ] propagate relevant parts of suggested tools guide to OS specific guides with links to this main document
-
-
-This is how I set up a fresh mac to start working in machine learning and programming. My lab runs under a proxy, so all the settings have that one extra ...sigh... task to work correctly. I keep this tutorial handy in case I do a clean OS install or if I need to check some of my initial settings.
+This is how I used to set up a fresh mac to start working in machine learning and programming during my PhD years. My lab used to run under a proxy, so all the settings have that one extra ...sigh... task to work correctly. I keep this tutorial handy in case I do a clean OS install or if I need to check some of my initial settings.
 
 ## Terminal
 
@@ -18,8 +9,12 @@ Refer to my section in [Suggested Tools and Setup: iTerm2 for MacOSX](./Suggeste
 
 ## Basic Settings
 
+References:
+- [How to change root password on macos unix using terminal](https://www.cyberciti.biz/faq/how-to-change-root-password-on-macos-unix-using-terminal/)
+- [Lock screen with CMD+L global hotkey on macos high sierra](https://achekulaev.medium.com/lock-screen-with-cmd-l-l-global-hotkey-on-macos-high-sierra-3c596b76026a)
+
 Setup root password:
-https://www.cyberciti.biz/faq/how-to-change-root-password-on-macos-unix-using-terminal/
+
 
 ```sh
 # @ shell(mac_osx)
@@ -28,7 +23,6 @@ sudo passwd root
 ```
 
 - Set up the screen lock command so you can do it every time you stand up:
-    - https://achekulaev.medium.com/lock-screen-with-cmd-l-l-global-hotkey-on-macos-high-sierra-3c596b76026a
     - Settings>Keyboard>Keyboard Shortcuts>App Shortcuts
         + All Applications
             * `Lock Screen`
@@ -203,8 +197,7 @@ And finally alias `brew` so it always uses your proxy settings:
 alias brew="https_proxy={PROXY_HOST}:{PORT} brew"
 ```
 
-Otherwise, if you're not under a proxy just follow the instructions here:
-https://docs.brew.sh/Installation
+Otherwise, if you're not under a proxy just follow [the official instructions here](https://docs.brew.sh/Installation).
 
 
 ## Curl proxy settings
@@ -232,8 +225,7 @@ Follow the [Git Setup and Customization](./Git-Setup-and-Customization.md) for m
 
 Docker allows us to run server apps that share an internal environment separate from the OS.
 
-Follow the following guide for docker.
-https://docs.docker.com/desktop/install/mac-install/
+Follow [the official guide for docker](https://docs.docker.com/desktop/install/mac-install/).
 
 - Use Apple menu >About this Mac. 
 - Confirm the Chip to determine the installation method
@@ -263,6 +255,16 @@ Test:`docker container --list`
 ## Install Python
 
 Follow my [Python setup guide](./Python-Setup.md)
+
+
+## GPU processing
+
+Macs don't have CUDA compatibility, and instead rely on [Metal](https://developer.apple.com/metal/), [which is at least supported by pytorch](https://pytorch.org/blog/introducing-accelerated-pytorch-training-on-mac/). 
+
+
+However, I don't really know much about this since I did all my GPU processing remotely connecting to a Linux server, for which you can follow [the Linux WSL Setup: CUDA and GPU settings guide](./Linux-WSL-Setup.md#CUDA-and-GPU-settings).
+
+For specific examples where I used CUDA compatible images, see my [CUDA python dockerfiles document](../ai_development/CUDA-python-dockerfiles.md)
 
 ---
 
