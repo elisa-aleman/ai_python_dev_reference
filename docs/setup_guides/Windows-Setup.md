@@ -137,7 +137,7 @@ Follow the [Git Setup and Customization](./Git-Setup-and-Customization.md) for m
 
 ## Install Docker Desktop for Windows
 
-Docker allows us to run server apps that share an internal environment separate from the OS.
+Docker allows us to run server apps that share an internal environment separate from the OS. This has the benefit of providing, sans any hardware incompatibilities, the same environment for anyone that uses the same docker image, leading to fewer compatibility issues when sharing our programs with others to run.
 
 Follow [this official guide for docker](https://docs.docker.com/desktop/install/windows-install/)
 
@@ -246,7 +246,7 @@ Follow my [Python setup guide](./Python-Setup.md)
 
 ## CUDA and GPU settings
 
-For accelerated GPU processing I recommend using WSL and a Docker image that uses CUDA, as described in my [Linux WSL Setup: CUDA and GPU settings guide](./Linux-WSL-Setup.md#CUDA-and-GPU-settings).
+For accelerated GPU processing (specifically nvidia GPUs) for your AI programs I recommend using WSL and a Docker image that uses [CUDA](https://en.wikipedia.org/wiki/CUDA), as described in my [Linux WSL Setup: CUDA and GPU settings guide](./Linux-WSL-Setup.md#CUDA-and-GPU-settings).
 
 For specific examples where I used CUDA compatible images, see my [CUDA python dockerfiles document](../ai_development/CUDA-python-dockerfiles.md)
 

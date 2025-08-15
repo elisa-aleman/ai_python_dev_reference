@@ -1,10 +1,9 @@
-# NOTE that as of 2025-08-14 CUDA 13 is not pytorch compatible
-FROM nvidia/cuda:13.0.0-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
-ENV CUDA_INT=130
-ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-13.0
+ENV CUDA_INT=118
+ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.8
 ENV CUDNN_DIR=/opt/cudnn
-ENV CUDACXX=/usr/local/cuda/bin/nvcc-13.0
+ENV CUDACXX=/usr/local/cuda/bin/nvcc-11.8
 
 ENV LD_LIBRARY_PATH=/usr/local/lib64
 ENV LD_LIBRARY_PATH=$CUDA_TOOLKIT_ROOT_DIR/lib64:$CUDNN_DIR/lib64:$LD_LIBRARY_PATH
@@ -67,15 +66,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# install pyenv and python 3.11.10
-# as of 2024-09, pytorch supports 3.12 but tensorflow seems to have some issues
-# https://github.com/tensorflow/tensorflow/issues/62003
+# install pyenv and python 3.12.11
+# as of 2025-08 pytorch supports 3.13 but Tensorflow only up to 3.12
 RUN git clone --depth=1 https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT="${HOME}/.pyenv"
 ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${PATH}"
 
-RUN pyenv install 3.11.10
-RUN pyenv global 3.11.10
+RUN pyenv install 3.12.11
+RUN pyenv global 3.12.11
 RUN pyenv rehash
 
 # Install poetry with pipx

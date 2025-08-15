@@ -1,5 +1,3 @@
-# CUDA 12.1.0 docker image has been deprecated
-# FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
 FROM nvidia/cuda:12.9.1-cudnn-devel-ubuntu22.04
 
 ENV CUDA_INT=129
@@ -56,27 +54,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         wget \
         xz-utils \
         zlib1g-dev \
-        # usability dependencies for audio and computer vision AI
-        ffmpeg \
-        g++-12 \
-        gcc-12 \
-        libgl1 \
-        libgomp1 \
-        libopencv-dev \
-        libprotobuf-dev protobuf-compiler \
-        libsm6 \
-        libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# install pyenv and python 3.11.10
-# as of 2024-09, pytorch supports 3.12 but tensorflow seems to have some issues
-# https://github.com/tensorflow/tensorflow/issues/62003
+# install pyenv and python 3.12.11
+# as of 2025-08 pytorch supports 3.13 but Tensorflow only up to 3.12
 RUN git clone --depth=1 https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT="${HOME}/.pyenv"
 ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${PATH}"
 
-RUN pyenv install 3.11.10
-RUN pyenv global 3.11.10
+RUN pyenv install 3.12.11
+RUN pyenv global 3.12.11
 RUN pyenv rehash
 
 # Install poetry with pipx
@@ -85,14 +72,5 @@ ENV PATH="$PATH:/root/.local/bin"
 RUN pipx install poetry && \
     pipx inject poetry poetry-plugin-export && \
     pipx install toml-cli
-
-# Install cmake
-# requires libprotobuf-dev protobuf-compiler
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.30.4/cmake-3.30.4-linux-x86_64.tar.gz && \
-    tar -zxvf cmake-3.30.4-linux-x86_64.tar.gz && \
-    rm cmake-3.30.4-linux-x86_64.tar.gz && \
-    mv cmake-* cmake
-
-ENV PATH=/root/cmake/bin:$PATH
 
 CMD ["/bin/bash"]

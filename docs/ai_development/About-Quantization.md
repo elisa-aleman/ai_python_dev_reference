@@ -289,18 +289,20 @@ graph LR
 
 ### Examples environment
 
-Example code was run on a docker container with CUDA 12.1 CUDNN 8 poetry and python 3.11.10:
+Example code was run on a docker container with CUDA 12.9 CUDNN 9.10 poetry and python 3.12:
 
 
 ```Dockerfile
 # @ ./env_build/dockerfiles/poetry_python_-_3-11_cuda12-1_cv-builds.dockerfile
 
-FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+# CUDA 12.1.0 docker image has been deprecated
+# FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:12.9.1-cudnn-devel-ubuntu22.04
 
-ENV CUDA_INT=121
-ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.1
+ENV CUDA_INT=129
+ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.9
 ENV CUDNN_DIR=/opt/cudnn
-ENV CUDACXX=/usr/local/cuda/bin/nvcc-12.1
+ENV CUDACXX=/usr/local/cuda/bin/nvcc-12.9
 
 ENV LD_LIBRARY_PATH=/usr/local/lib64
 ENV LD_LIBRARY_PATH=$CUDA_TOOLKIT_ROOT_DIR/lib64:$CUDNN_DIR/lib64:$LD_LIBRARY_PATH
@@ -363,15 +365,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# install pyenv and python 3.11.10
-# as of 2024-09, pytorch supports 3.12 but tensorflow seems to have some issues
-# https://github.com/tensorflow/tensorflow/issues/62003
+# install pyenv and python 3.12.11
+# as of 2025-08 pytorch supports 3.13 but Tensorflow only up to 3.12
 RUN git clone --depth=1 https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT="${HOME}/.pyenv"
 ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${PATH}"
 
-RUN pyenv install 3.11.10
-RUN pyenv global 3.11.10
+RUN pyenv install 3.12.11
+RUN pyenv global 3.12.11
 RUN pyenv rehash
 
 # Install poetry with pipx
@@ -416,6 +417,7 @@ docker run \
 docker exec -it -w /v/ai_python_dev_reference ai_dev_example bash
 ```
 
+
 ```sh
 # @ ai_dev_example::/v/ai_python_dev_reference
 mkdir ai_examples_cuda_12
@@ -423,7 +425,7 @@ cd ai_examples_cuda_12
 poetry init \
     --name "ai_examples" \
     --description "AI model example code for training and quantization, as well as converting, pytorch, onnx, tflite, and ai_edge_torch" \
-    --python "~3.11" \
+    --python "~3.12" \
     --author "Elisa Aleman <elisa.claire.aleman.carreon@gmail.com>" \
     --license "GPL-3.0-or-later" \
     --no-interaction
@@ -431,22 +433,111 @@ mkdir ai_examples
 touch ai_examples/__init__.py
 touch README.md
 
-poetry add torch==2.4.0 torchvision@* tensorflow-cpu@* onnx@* onnxruntime@* ai_edge_torch
+# add the most unstable one first as a dry-run and see which versions we can use for the rest
+poetry add ai_edge_torch@0.4.0 --dry-run
+
+"""
+Updating dependencies
+Resolving dependencies... (4.7s)
+
+Package operations: 71 installs, 0 updates, 0 removals
+
+  - Installing mdurl (0.1.2)
+  - Installing markdown-it-py (4.0.0)
+  - Installing markupsafe (3.0.2)
+  - Installing numpy (2.1.3)
+  - Installing nvidia-nvjitlink-cu12 (12.4.127)
+  - Installing pygments (2.19.2)
+  - Installing typing-extensions (4.14.1)
+  - Installing absl-py (2.3.1)
+  - Installing certifi (2025.8.3)
+  - Installing charset-normalizer (3.4.3)
+  - Installing grpcio (1.74.0)
+  - Installing h5py (3.14.0)
+  - Installing idna (3.10)
+  - Installing markdown (3.8.2)
+  - Installing ml-dtypes (0.5.3)
+  - Installing mpmath (1.3.0)
+  - Installing namex (0.1.0)
+  - Installing nvidia-cublas-cu12 (12.4.5.8)
+  - Installing nvidia-cusparse-cu12 (12.3.1.170)
+  - Installing optree (0.17.0)
+  - Installing packaging (25.0)
+  - Installing protobuf (5.29.5)
+  - Installing rich (14.1.0)
+  - Installing setuptools (80.9.0)
+  - Installing six (1.17.0)
+  - Installing urllib3 (2.5.0)
+  - Installing scipy (1.16.1)
+  - Installing tensorboard-data-server (0.7.2)
+  - Installing werkzeug (3.1.3)
+  - Installing wheel (0.45.1)
+  - Installing astunparse (1.6.3)
+  - Installing filelock (3.19.1)
+  - Installing fsspec (2025.7.0)
+  - Installing flatbuffers (25.2.10)
+  - Installing jaxlib (0.7.0)
+  - Installing jinja2 (3.1.6)
+  - Installing libclang (18.1.1)
+  - Installing google-pasta (0.2.0)
+  - Installing keras (3.11.2)
+  - Installing iniconfig (2.1.0)
+  - Installing gast (0.6.0)
+  - Installing nvidia-cuda-cupti-cu12 (12.4.127)
+  - Installing nvidia-cuda-runtime-cu12 (12.4.127)
+  - Installing tensorboard (2.19.0)
+  - Installing nvidia-cudnn-cu12 (9.1.0.70)
+  - Installing nvidia-cufft-cu12 (11.2.1.3)
+  - Installing nvidia-cusolver-cu12 (11.6.1.9)
+  - Installing opt-einsum (3.4.0)
+  - Installing pluggy (1.6.0)
+  - Installing requests (2.32.4)
+  - Installing sympy (1.13.1)
+  - Installing nvidia-nccl-cu12 (2.21.5)
+  - Installing triton (3.2.0)
+  - Installing nvidia-cuda-nvrtc-cu12 (12.4.127)
+  - Installing nvidia-nvtx-cu12 (12.4.127)
+  - Installing termcolor (3.1.0)
+  - Installing nvidia-curand-cu12 (10.3.5.147)
+  - Installing wrapt (1.17.3)
+  - Installing networkx (3.5)
+  - Installing nvidia-cusparselt-cu12 (0.6.2)
+  - Installing ai-edge-litert (1.2.0)
+  - Installing immutabledict (4.2.1)
+  - Installing pytest (8.4.1)
+  - Installing jax (0.7.0)
+  - Installing torch (2.6.0)
+  - Installing tensorflow (2.19.1)
+  - Installing ai-edge-quantizer (0.1.0)
+  - Installing safetensors (0.6.2)
+  - Installing tabulate (0.9.0)
+  - Installing torch-xla2 (0.0.1.dev202412041639)
+  - Installing ai-edge-torch (0.4.0)
+"""
+
+# Now actually add the versions we can immediately determine
+poetry add ai_edge_torch@0.4.0 torch@2.6.0 tensorflow@2.19.1
+
+# Finally add the libraries we need to match dependencies with pre-installed libraries
+poetry add "torchvision@>0.0" --dry-run
+poetry add torchvision@0.21.0
+poetry add onnx onnxruntime-gpu
+
 poetry install
-poetry shell
+eval $(poetry env activate)
 
 # @ ai_dev_example::poetry_shell::/v/ai_python_dev_reference/ai_examples_cuda_12
 python
 ```
 
-And to run it after having made the environment:
+And to run it after having made the environment (I chose option 1 for container attachment):
 
 ```sh
 # @ shell(linux/mac_osx/wsl)
 docker exec -it -w /v/ai_python_dev_reference/ai_examples_cuda_12 ai_dev_example bash
 
 # @ ai_dev_example::/v/ai_python_dev_reference/ai_examples_cuda_12
-poetry shell
+eval $(poetry env activate)
 
 # @ ai_dev_example::poetry_shell::/v/ai_python_dev_reference/ai_examples_cuda_12
 python
@@ -455,7 +546,7 @@ python
 But it can also be run in a Google Colab notebook with the environment, with the caveat that it will run a specific python version (at the time of writing `3.10.12`), and has no dependency solver.
 
 ```python
-!pip install torch==2.4.0 torchvision==0.19.0 tensorflow-cpu==2.17.0 onnx==1.16.2 onnxruntime==1.19.2 ai_edge_torch==0.2.0
+!pip install torch==2.6.0 torchvision==0.21.0 tensorflow==2.19.1 "onnx (>=1.18.0,<2.0.0)" "onnxruntime-gpu (>=1.22.0,<2.0.0)" ai_edge_torch==0.4.0
 ```
 
 ### Pytorch Quantization
@@ -708,10 +799,10 @@ def forward(self, x):
     fc_bias = self.fc.bias
     bn1_running_mean = self.bn1.running_mean
     bn1_running_var = self.bn1.running_var
+    bn1_num_batches_tracked = self.bn1.num_batches_tracked;  bn1_num_batches_tracked = None
     conv2d = torch.ops.aten.conv2d.default(x, conv1_weight, conv1_bias);  x = conv1_weight = conv1_bias = None
-    _native_batch_norm_legit_no_training = torch.ops.aten._native_batch_norm_legit_no_training.default(conv2d, bn1_weight, bn1_bias, bn1_running_mean, bn1_running_var, 0.1, 1e-05);  conv2d = bn1_weight = bn1_bias = bn1_running_mean = bn1_running_var = None
-    getitem = _native_batch_norm_legit_no_training[0];  _native_batch_norm_legit_no_training = None
-    relu = torch.ops.aten.relu.default(getitem);  getitem = None
+    batch_norm = torch.ops.aten.batch_norm.default(conv2d, bn1_weight, bn1_bias, bn1_running_mean, bn1_running_var, False, 0.1, 1e-05, True);  conv2d = bn1_weight = bn1_bias = bn1_running_mean = bn1_running_var = None
+    relu = torch.ops.aten.relu.default(batch_norm);  batch_norm = None
     max_pool2d = torch.ops.aten.max_pool2d.default(relu, [28, 28], [28, 28]);  relu = None
     squeeze = torch.ops.aten.squeeze.dim(max_pool2d, 2);  max_pool2d = None
     squeeze_1 = torch.ops.aten.squeeze.dim(squeeze, 2);  squeeze = None
@@ -726,9 +817,44 @@ Now, for training with this exported model, or use within pytorch, it's necessar
 
 
 ```python
-example_inputs = (torch.rand(2, 3, 224, 224),)
+example_inputs = (torch.randn(1,1,28,28),)
 # for pytorch 2.5+
-exported_model = torch.export.export_for_training(float_model, example_inputs).module()
+exported_model = torch.export.export_for_training(model, example_inputs).module()
+
+print(exported_model)
+'''
+GraphModule(
+  (conv1): Module()
+  (bn1): Module()
+  (fc): Module()
+)
+
+
+
+def forward(self, x):
+    x, = fx_pytree.tree_flatten_spec(([x], {}), self._in_spec)
+    conv1_weight = self.conv1.weight
+    conv1_bias = self.conv1.bias
+    bn1_weight = self.bn1.weight
+    bn1_bias = self.bn1.bias
+    fc_weight = self.fc.weight
+    fc_bias = self.fc.bias
+    bn1_running_mean = self.bn1.running_mean
+    bn1_running_var = self.bn1.running_var
+    bn1_num_batches_tracked = self.bn1.num_batches_tracked
+    conv2d = torch.ops.aten.conv2d.default(x, conv1_weight, conv1_bias);  x = conv1_weight = conv1_bias = None
+    add_ = torch.ops.aten.add_.Tensor(bn1_num_batches_tracked, 1);  bn1_num_batches_tracked = add_ = None
+    batch_norm = torch.ops.aten.batch_norm.default(conv2d, bn1_weight, bn1_bias, bn1_running_mean, bn1_running_var, True, 0.1, 1e-05, True);  conv2d = bn1_weight = bn1_bias = bn1_running_mean = bn1_running_var = None
+    relu = torch.ops.aten.relu.default(batch_norm);  batch_norm = None
+    max_pool2d = torch.ops.aten.max_pool2d.default(relu, [28, 28], [28, 28]);  relu = None
+    squeeze = torch.ops.aten.squeeze.dim(max_pool2d, 2);  max_pool2d = None
+    squeeze_1 = torch.ops.aten.squeeze.dim(squeeze, 2);  squeeze = None
+    linear = torch.ops.aten.linear.default(squeeze_1, fc_weight, fc_bias);  squeeze_1 = fc_weight = fc_bias = None
+    return pytree.tree_unflatten((linear,), self._out_spec)
+
+# To see more debug info, please use `graph_module.print_readable()`
+'''
+
 # for pytorch 2.4 and before
 # from torch._export import capture_pre_autograd_graph
 # exported_model = capture_pre_autograd_graph(model_to_quantize, example_inputs)
@@ -1960,12 +2086,14 @@ However, some functions are useful in FX Graph mode that are not fully yet imple
 
 [AI Edge Torch](https://github.com/google-ai-edge/ai-edge-torch/) is a newer tool made to convert pytorch models to a [TFLite](https://ai.google.dev/edge/litert) backend using PT2E.
 
-It is extremely new in development (the current latest version is 0.2.0 at the time of writing), and not all models can be converted to PT2E during training (although they can be refactored to be exported to PT2E post-training), so I decided to write a new backend configuration for FX model training, followed by a later conversion to PT2E
+It is extremely new in development (the current latest version is 0.4.0 at the time of writing), and not all models can be converted to PT2E during training (although they can be refactored to be exported to PT2E post-training), so I decided to write a new backend configuration for FX model training, followed by a later conversion to PT2E
 
 Based on [`ai_edge_torch.quantize.pt2e_quantizer.PT2EQuantizer`](https://github.com/google-ai-edge/ai-edge-torch/blob/main/ai_edge_torch/quantize/pt2e_quantizer.py)
 
 
 ```python
+# @ ai_python_dev_reference/ai_examples_cuda_12/ai_examples/fx/backend_config/ai_edge_backend.py
+
 '''
 
 Supported per tensor affine for activation
@@ -2350,6 +2478,8 @@ def get_ai_edge_torch_backend_config_dict():
 Based on [this outdated pytorch version implementation of openvino backend config](https://github.com/open-mmlab/mmrazor/blob/main/mmrazor/structures/quantization/backend_config/openvino.py) from mmrazor.
 
 ```python
+# @ ai_python_dev_reference/ai_examples_cuda_12/ai_examples/fx/backend_config/openvino_backend.py
+
 '''
 Based on the outdated pytorch version (<2.0) implementation of openvino backend config from mmrazor:
 
@@ -2552,6 +2682,9 @@ It is also similarly necessary for tflite model exports.
 I personally add a post processing method before exporting to ONNX if I need split nodes to be quantized correctly:
 
 ```python
+# @ ai_python_dev_reference/ai_examples_cuda_12/ai_examples/fx/utils/pre_process.py
+
+import torch
 from torch.ao.quantization.backend_config import ObservationType, BackendConfig
 from torch.ao.quantization.fx.graph_module import ObservedGraphModule
 
@@ -2607,6 +2740,8 @@ from torch.ao.quantization.fx.tracer import QuantizationTracer
 from torch.fx import GraphModule
 from torch.ao.quantization.fx import prepare
 from torch.ao.quantization.backend_config import get_native_backend_config
+
+from ai_examples.fx.utils.pre_process import propagate_split_share_qparams_pre_process
 
 class ExampleModel(torch.nn.Module):
     '''
@@ -2827,6 +2962,8 @@ Another example is that QAT fused nodes would be exported in their float mode, w
 This is a lot more complicated to solve, and needs to have some post processing alterations before the exporting of a model.
 
 ```python
+# @ ai_python_dev_reference/ai_examples_cuda_12/ai_examples/fx/utils/post_process.py
+
 # Modified from outdated `mmrazor.models.quantizers.native_quantizer.TorchNativeQuantizer.post_process_for_deploy
 # reference:
 # https://github.com/open-mmlab/mmrazor/blob/main/mmrazor/models/quantizers/native_quantizer.py#L253
@@ -2942,6 +3079,8 @@ Calling the `to_float` method on the QAT fused modules will fuse the Batch Norma
 
 Here's an example of the change this method performs (skipping model definitions). Notice how Batch Normalization layers are inherently fused via the weights:
 ```python
+from ai_examples.fx.utils.post_process_qat import fuse_qat_bn_post_process
+
 print(prepared_model)
 '''
 ExampleModel(
@@ -3287,11 +3426,13 @@ approx_max_abs_clamp_x ~= max(abs(x))
 
 ```
 
-However, ideally, we should make a backend configuration that doesn't share quantization parameters in the first place. The reason for that is that the weights would 
+However, ideally, we should make a backend configuration that doesn't share quantization parameters in the first place. The reason for that is that the weights will get trained with this unshared observer step.
 
 For example, we might export the native backend model to onnx. If we have the chance to prepare the model before training, we should alter the backend config:
 
 ```python
+# @ ai_python_dev_reference/ai_examples_cuda_12/ai_examples/fx/utils/pre_process.py
+
 import torch
 from torch.ao.quantization.backend_config import (
     ObservationType,
@@ -3347,6 +3488,7 @@ from torch.fx import GraphModule
 from torch.ao.quantization.fx import prepare
 from torch.ao.quantization.backend_config import get_native_backend_config
 
+from ai_examples.fx.utils.pre_process import relu_clamp_backend_config_unshare_observers
 
 class ExampleModel(torch.nn.Module):
     '''
@@ -3435,44 +3577,44 @@ prepared_fx(example_inputs[0])
 print(prepared_fx)
 '''
 GraphModule(
-  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=-3.358337879180908, max_val=3.094209671020508)
+  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=-2.873756170272827, max_val=3.512624740600586)
   (conv1): Conv2d(
     1, 32, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([ 0.3141,  0.8659, -0.3041, -0.4085, -0.3968,  0.2745,  0.3924,  0.6181,
-              -0.6419,  0.3388, -0.6847,  0.6948, -0.6194,  0.5268,  0.5759, -0.2281,
-               0.0610,  0.7425, -0.1603,  0.7990, -0.9284,  0.3517,  0.5457, -0.3669,
-               0.5580, -0.4137, -0.4218, -0.9705, -0.5250, -0.5045,  0.4345, -0.2527]), max_val=tensor([ 0.3141,  0.8659, -0.3041, -0.4085, -0.3968,  0.2745,  0.3924,  0.6181,
-              -0.6419,  0.3388, -0.6847,  0.6948, -0.6194,  0.5268,  0.5759, -0.2281,
-               0.0610,  0.7425, -0.1603,  0.7990, -0.9284,  0.3517,  0.5457, -0.3669,
-               0.5580, -0.4137, -0.4218, -0.9705, -0.5250, -0.5045,  0.4345, -0.2527])
+      min_val=tensor([-0.2244,  0.1366,  0.5535,  0.4781,  0.9987, -0.8585,  0.2149,  0.2896,
+              -0.3051, -0.2861,  0.4546,  0.6375, -0.9563, -0.2443,  0.9397,  0.4525,
+              -0.8703,  0.0118,  0.7989,  0.4656,  0.8642, -0.8372, -0.6900, -0.2179,
+              -0.9575,  0.1994,  0.9602,  0.8782,  0.1776, -0.9443, -0.2989,  0.3896]), max_val=tensor([-0.2244,  0.1366,  0.5535,  0.4781,  0.9987, -0.8585,  0.2149,  0.2896,
+              -0.3051, -0.2861,  0.4546,  0.6375, -0.9563, -0.2443,  0.9397,  0.4525,
+              -0.8703,  0.0118,  0.7989,  0.4656,  0.8642, -0.8372, -0.6900, -0.2179,
+              -0.9575,  0.1994,  0.9602,  0.8782,  0.1776, -0.9443, -0.2989,  0.3896])
     )
   )
-  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=-3.481182813644409, max_val=3.503840446472168)
-  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=-3.481182813644409, max_val=3.503840446472168)
+  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=-3.461930274963379, max_val=3.918088436126709)
+  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=0.0, max_val=3.918088436126709)
   (conv2): Conv2d(
     32, 10, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([-0.1766, -0.1619, -0.1684, -0.1532, -0.1666, -0.1548, -0.1617, -0.1751,
-              -0.1721, -0.1630]), max_val=tensor([0.1635, 0.1671, 0.1758, 0.1766, 0.1646, 0.1757, 0.1751, 0.1609, 0.1639,
-              0.1756])
+      min_val=tensor([-0.1602, -0.1757, -0.1724, -0.1654, -0.1460, -0.1729, -0.1722, -0.1635,
+              -0.1721, -0.1758]), max_val=tensor([0.1669, 0.1637, 0.1765, 0.1631, 0.1765, 0.1700, 0.1761, 0.1572, 0.1726,
+              0.1767])
     )
   )
-  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
-  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=-2.4537484645843506, max_val=1.3463588953018188)
+  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.3463588953018188)
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
-  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
-  (activation_post_process_7): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.3463588953018188)
+  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.3463588953018188)
+  (activation_post_process_7): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.3463588953018188)
   (fc): Linear(
     in_features=10, out_features=10, bias=True
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([-0.3113, -0.1477, -0.3055, -0.2916, -0.2433, -0.3093, -0.3096, -0.2451,
-              -0.3053, -0.2737]), max_val=tensor([0.3001, 0.2993, 0.2062, 0.2732, 0.1871, 0.2586, 0.2617, 0.2384, 0.1637,
-              0.3034])
+      min_val=tensor([-0.2888, -0.2640, -0.3119, -0.3112, -0.2534, -0.3156, -0.2953, -0.3095,
+              -0.2894, -0.2766]), max_val=tensor([0.2896, 0.2684, 0.2644, 0.2437, 0.3056, 0.3141, 0.3016, 0.2660, 0.2929,
+              0.3111])
     )
   )
-  (activation_post_process_8): MovingAverageMinMaxObserver(min_val=-0.4853910207748413, max_val=0.9318119287490845)
+  (activation_post_process_8): MovingAverageMinMaxObserver(min_val=-0.6559169888496399, max_val=1.2133853435516357)
 )
 
 
@@ -3501,10 +3643,12 @@ def forward(self, x):
 '''
 ```
 
-As we can see, the `min_val` for the `activation_post_process_1` and `activation_post_process_2`, as well as `activation_post_process_3` and `activation_post_process_4`, and so on on nodes followed by unfused relu with their own observer are different after passing some example input to the observers, which means we can just eliminate the previous activation and nodes if we no longer need to train or calibrate a model. Assuming we had done that:
+As we can see, the `min_val` for the `activation_post_process_1` and `activation_post_process_2`, as well as `activation_post_process_3` and `activation_post_process_4`, and so on, on nodes followed by unfused relu with their own observer are different after passing some example input to the observers, which means we can just eliminate the previous activation and nodes if we no longer need to train or calibrate a model. To be more explicit, for example the `activation_post_process_1.min_val = -3.461930274963379` while `activation_post_process_2.min_val = 0.0`. Had we kept the shared observers, the minimum would always be below 0 and waste quantization space on the 0-127 int scale. Assuming we had done that:
 
 
 ```python
+# @ ai_python_dev_reference/ai_examples_cuda_12/ai_examples/fx/utils/post_process.py
+
 import torch
 from torch.ao.quantization.fx.graph_module import ObservedGraphModule
 
@@ -3593,48 +3737,48 @@ def merge_relu_clamp_to_qparams_post_process(
 
 ```python
 
+from ai_examples.fx.utils.post_process import merge_relu_clamp_to_qparams_post_process
+
 merge_relu_clamp_to_qparams_post_process(prepared_fx)
 print(prepared_fx)
 '''
 GraphModule(
-  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=-3.358337879180908, max_val=3.094209671020508)
+  (activation_post_process_0): MovingAverageMinMaxObserver(min_val=-2.873756170272827, max_val=3.512624740600586)
   (conv1): Conv2d(
     1, 32, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([ 0.3141,  0.8659, -0.3041, -0.4085, -0.3968,  0.2745,  0.3924,  0.6181,
-              -0.6419,  0.3388, -0.6847,  0.6948, -0.6194,  0.5268,  0.5759, -0.2281,
-               0.0610,  0.7425, -0.1603,  0.7990, -0.9284,  0.3517,  0.5457, -0.3669,
-               0.5580, -0.4137, -0.4218, -0.9705, -0.5250, -0.5045,  0.4345, -0.2527]), max_val=tensor([ 0.3141,  0.8659, -0.3041, -0.4085, -0.3968,  0.2745,  0.3924,  0.6181,
-              -0.6419,  0.3388, -0.6847,  0.6948, -0.6194,  0.5268,  0.5759, -0.2281,
-               0.0610,  0.7425, -0.1603,  0.7990, -0.9284,  0.3517,  0.5457, -0.3669,
-               0.5580, -0.4137, -0.4218, -0.9705, -0.5250, -0.5045,  0.4345, -0.2527])
+      min_val=tensor([-0.2244,  0.1366,  0.5535,  0.4781,  0.9987, -0.8585,  0.2149,  0.2896,
+              -0.3051, -0.2861,  0.4546,  0.6375, -0.9563, -0.2443,  0.9397,  0.4525,
+              -0.8703,  0.0118,  0.7989,  0.4656,  0.8642, -0.8372, -0.6900, -0.2179,
+              -0.9575,  0.1994,  0.9602,  0.8782,  0.1776, -0.9443, -0.2989,  0.3896]), max_val=tensor([-0.2244,  0.1366,  0.5535,  0.4781,  0.9987, -0.8585,  0.2149,  0.2896,
+              -0.3051, -0.2861,  0.4546,  0.6375, -0.9563, -0.2443,  0.9397,  0.4525,
+              -0.8703,  0.0118,  0.7989,  0.4656,  0.8642, -0.8372, -0.6900, -0.2179,
+              -0.9575,  0.1994,  0.9602,  0.8782,  0.1776, -0.9443, -0.2989,  0.3896])
     )
   )
-  (activation_post_process_1): MovingAverageMinMaxObserver(min_val=-3.481182813644409, max_val=3.503840446472168)
-  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=-3.481182813644409, max_val=3.503840446472168)
+  (activation_post_process_2): MovingAverageMinMaxObserver(min_val=0.0, max_val=3.918088436126709)
   (conv2): Conv2d(
     32, 10, kernel_size=(1, 1), stride=(1, 1)
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([-0.1766, -0.1619, -0.1684, -0.1532, -0.1666, -0.1548, -0.1617, -0.1751,
-              -0.1721, -0.1630]), max_val=tensor([0.1635, 0.1671, 0.1758, 0.1766, 0.1646, 0.1757, 0.1751, 0.1609, 0.1639,
-              0.1756])
+      min_val=tensor([-0.1602, -0.1757, -0.1724, -0.1654, -0.1460, -0.1729, -0.1722, -0.1635,
+              -0.1721, -0.1758]), max_val=tensor([0.1669, 0.1637, 0.1765, 0.1631, 0.1765, 0.1700, 0.1761, 0.1572, 0.1726,
+              0.1767])
     )
   )
-  (activation_post_process_3): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
-  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_4): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.3463588953018188)
   (pool): MaxPool2d(kernel_size=28, stride=28, padding=0, dilation=1, ceil_mode=False)
-  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
-  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
-  (activation_post_process_7): MovingAverageMinMaxObserver(min_val=-1.0726615190505981, max_val=1.4624204635620117)
+  (activation_post_process_5): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.3463588953018188)
+  (activation_post_process_6): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.3463588953018188)
+  (activation_post_process_7): MovingAverageMinMaxObserver(min_val=0.0, max_val=1.3463588953018188)
   (fc): Linear(
     in_features=10, out_features=10, bias=True
     (weight_fake_quant): MovingAveragePerChannelMinMaxObserver(
-      min_val=tensor([-0.3113, -0.1477, -0.3055, -0.2916, -0.2433, -0.3093, -0.3096, -0.2451,
-              -0.3053, -0.2737]), max_val=tensor([0.3001, 0.2993, 0.2062, 0.2732, 0.1871, 0.2586, 0.2617, 0.2384, 0.1637,
-              0.3034])
+      min_val=tensor([-0.2888, -0.2640, -0.3119, -0.3112, -0.2534, -0.3156, -0.2953, -0.3095,
+              -0.2894, -0.2766]), max_val=tensor([0.2896, 0.2684, 0.2644, 0.2437, 0.3056, 0.3141, 0.3016, 0.2660, 0.2929,
+              0.3111])
     )
   )
-  (activation_post_process_8): MovingAverageMinMaxObserver(min_val=-0.4853910207748413, max_val=0.9318119287490845)
+  (activation_post_process_8): MovingAverageMinMaxObserver(min_val=-0.6559169888496399, max_val=1.2133853435516357)
 )
 
 
@@ -3642,13 +3786,9 @@ GraphModule(
 def forward(self, x):
     activation_post_process_0 = self.activation_post_process_0(x);  x = None
     conv1 = self.conv1(activation_post_process_0);  activation_post_process_0 = None
-    activation_post_process_1 = self.activation_post_process_1(conv1);  conv1 = None
-    relu = torch.nn.functional.relu(activation_post_process_1, inplace = False);  activation_post_process_1 = None
-    activation_post_process_2 = self.activation_post_process_2(relu);  relu = None
+    activation_post_process_2 = self.activation_post_process_2(conv1);  conv1 = None
     conv2 = self.conv2(activation_post_process_2);  activation_post_process_2 = None
-    activation_post_process_3 = self.activation_post_process_3(conv2);  conv2 = None
-    relu_1 = torch.nn.functional.relu(activation_post_process_3, inplace = False);  activation_post_process_3 = None
-    activation_post_process_4 = self.activation_post_process_4(relu_1);  relu_1 = None
+    activation_post_process_4 = self.activation_post_process_4(conv2);  conv2 = None
     pool = self.pool(activation_post_process_4);  activation_post_process_4 = None
     activation_post_process_5 = self.activation_post_process_5(pool);  pool = None
     squeeze = torch.squeeze(activation_post_process_5, dim = 2);  activation_post_process_5 = None
@@ -3663,6 +3803,8 @@ def forward(self, x):
 '''
 
 ```
+
+Notice that the `activation_post_process_1` has been completely removed leaving only the `activation_post_process_2`, and so on for subsequent activations.
 
 While convolutions and linear layers usually can be fused without resorting to this method, other unfusable layers can benefit from this process.
 

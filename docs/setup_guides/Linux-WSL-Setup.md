@@ -3,11 +3,7 @@
 This guide is under construction
 
 TODO:
-- [ ] Re-check old narrative
 - [ ] Add comments about proxy?
-- [ ] Check all syntax highlights and location comments
-- [ ] Wrap all links
-- [ ] propagate relevant parts of suggested tools guide to OS specific guides with links to this main document
 
 This is how I set up a fresh linux installation to start working in machine learning and programming. 
 
@@ -102,7 +98,7 @@ Follow my [Python setup guide](./Python-Setup.md)
 
 ## CUDA and GPU settings
 
-For a linux system to use an nvidia GPU for calculations instead of the CPU, we need to install CUDA, and for neural networks specifically, cuDNN is also needed.
+For a linux system to use an nvidia GPU for calculations instead of the CPU, we need to install [CUDA](https://en.wikipedia.org/wiki/CUDA), and for neural networks specifically, cuDNN is also needed.
 
 1. [NVIDIA drivers installation guide](https://docs.nvidia.com/datacenter/tesla/tesla-installation-notes/index.html)
 2. [CUDA Installation guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
