@@ -1,6 +1,8 @@
 # Poetry python C++ and CUDA extensions guide
 
-This guide is under development
+**This guide is under development**
+
+
 
 - References :https://github.com/python-poetry/poetry/issues/8460
 

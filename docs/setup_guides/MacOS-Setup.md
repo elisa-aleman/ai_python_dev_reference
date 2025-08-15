@@ -259,7 +259,7 @@ Follow my [Python setup guide](./Python-Setup.md)
 
 ## GPU processing
 
-Macs don't have CUDA compatibility, and instead rely on [Metal](https://developer.apple.com/metal/), [which is at least supported by pytorch](https://pytorch.org/blog/introducing-accelerated-pytorch-training-on-mac/). 
+Macs don't have [CUDA](https://en.wikipedia.org/wiki/CUDA) compatibility, and instead rely on [Metal](https://developer.apple.com/metal/), [which is at least supported by pytorch](https://pytorch.org/blog/introducing-accelerated-pytorch-training-on-mac/). 
 
 
 However, I don't really know much about this since I did all my GPU processing remotely connecting to a Linux server, for which you can follow [the Linux WSL Setup: CUDA and GPU settings guide](./Linux-WSL-Setup.md#CUDA-and-GPU-settings).

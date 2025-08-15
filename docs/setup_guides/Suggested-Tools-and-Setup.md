@@ -239,6 +239,7 @@ Then here's some cool packages to try:
 - [Python Pretty Print](https://packagecontrol.io/packages/Python%20Pretty%20Print)
     - Haven't tried it on Sublime Text yet, but `pprint` is something I use frequently on python. Sounds promising.
 - [Selection Evaluator](https://packagecontrol.io/packages/Selection%20Evaluator)
+- [SublimeLinter](https://packagecontrol.io/packages/SublimeLinter)
 - [TOML](https://packagecontrol.io/packages/TOML)- Adds syntax highlight for TOML files
 
 <!-- - [Invert Current Color Scheme](https://packagecontrol.io/packages/Invert%20Current%20Color%20Scheme) -->

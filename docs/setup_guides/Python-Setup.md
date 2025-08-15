@@ -332,7 +332,7 @@ RUN pip install pipx
 ENV PATH="${PATH}:/root/.local/bin"
 ```
 
-## Poetry for python project / dependency management
+## Poetry for python project and dependency management
 
 Python has been moving away from using `requirements.txt` or `setup.py` to build or install packages, and instead focusing on preparing an independent `pyproject.toml` that specifies build requirements as well as runtime requirements in a way that they can be run automatically. This is outlined in [PEP 517](https://peps.python.org/pep-0517/). Using this building environment, several other packaging tools emerged. While I haven't tested them all, I have chosen Poetry.
 

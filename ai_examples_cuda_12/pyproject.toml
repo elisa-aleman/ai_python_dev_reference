@@ -1,21 +1,23 @@
-[tool.poetry]
+[project]
 name = "ai-examples"
 version = "0.1.0"
 description = "AI model example code for training and quantization, as well as converting, pytorch, onnx, tflite, and ai_edge_torch"
-authors = ["Elisa Aleman <elisa.claire.aleman.carreon@gmail.com>"]
-license = "GPL-3.0-or-later"
+authors = [
+    {name = "Elisa Aleman",email = "elisa.claire.aleman.carreon@gmail.com"}
+]
+license = {text = "GPL-3.0-or-later"}
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "~3.11"
-torch = "2.4.0"
-torchvision = "*"
-tensorflow-cpu = "*"
-onnx = "*"
-onnxruntime = "*"
-ai-edge-torch = "^0.2.0"
+requires-python = "~3.12"
+dependencies = [
+    "ai-edge-torch (==0.4.0)",
+    "torch (==2.6.0)",
+    "tensorflow (==2.19.1)",
+    "torchvision (==0.21.0)",
+    "onnx (>=1.18.0,<2.0.0)",
+    "onnxruntime-gpu (>=1.22.0,<2.0.0)"
+]
 
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
