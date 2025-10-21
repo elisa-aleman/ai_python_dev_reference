@@ -232,10 +232,10 @@ Then here's some cool packages to try:
 - [MarkdownEditing](https://packagecontrol.io/packages/MarkdownEditing)
 - [MarkdownPreview](https://packagecontrol.io/packages/MarkdownPreview)
 - [MarkdownTOC](https://packagecontrol.io/packages/MarkdownTOC)
+- [RainbowCSV](https://packagecontrol.io/packages/rainbow_csv)
+- [Advanced CSV](https://packagecontrol.io/packages/Advanced%20CSV)
 - [PackageResourceViewer](https://packagecontrol.io/packages/PackageResourceViewer)
 - [Paste as One Line](https://packagecontrol.io/packages/Paste%20as%20One%20Line)
-- [Python PEP8 Autoformat](https://packagecontrol.io/packages/Python%20PEP8%20Autoformat)
-    - Haven't tried it yet, sounds promising.
 - [Python Pretty Print](https://packagecontrol.io/packages/Python%20Pretty%20Print)
     - Haven't tried it on Sublime Text yet, but `pprint` is something I use frequently on python. Sounds promising.
 - [Selection Evaluator](https://packagecontrol.io/packages/Selection%20Evaluator)
@@ -675,10 +675,19 @@ The installation on Linux is straight-forward:
 The specific package for LaTeX on linux has different versions depending on how many of the accompanying packages you wish to install. [You can read about the differences here](https://tex.stackexchange.com/questions/245982/differences-between-texlive-packages-in-linux). I prefer `texlive-latex-extra`, one step below the largest installation of them all.
 
 ```sh
-# @ shell(linux/wsl)
-sudo apt install texlive-latex-extra
+# @ shell(linux/wsl) (debian)
+sudo apt-get install texlive-latex-extra
 sudo apt-get install latexdiff
+
+# @ shell(linux/wsl) (arch)
+pacman -S \
+    texlive-latexextra \
+    texlive-binextra \
+    texlive-fontsrecommended \
+    texlive-fontsextra
 ```
+
+Latexdiff is contained in `texlive-binextra` in the case of arch linux.
 
 ##### Confirm install
 

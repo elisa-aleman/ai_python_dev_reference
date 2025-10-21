@@ -6,7 +6,6 @@ TODO:
 - [ ] Wrap all links
 - [ ] ssh rsa update needs `HostKeyAlgorithms=ssh-rsa` and `PubkeyAcceptedAlgorithms=+ssh-rsa` since ssh update deprecates rsa
 - [ ] ssh GitHub urls can be `git@HOST:username/repo.git` from the ssh config file instead of `git@github.com:username/repo.git` to specify which key to use within the same repo. The HOST might be a nickname for this connection, meanwhile, Hostname must be the actual URL to the host
-- [ ] `ssh -T git@github_backup` to confirm
 - [ ] Delete known hosts and then `ssh-keyscan github.com >> ~/.ssh/known_hosts` to remake known hosts with new keys
 - [ ] Ssh config file needs separate Host and Port settings, not colon separated
 
@@ -188,11 +187,11 @@ https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/c
 
 1. Generate an SSH key
 First, create an SSH key for your personal account:
-```
+```sh
 ssh-keygen -t rsa -b 4096 -C "your_personal_email@example.com" -f ~/.ssh/<personal_key> 
 ```
 Then for your work account:
-```
+```sh
 ssh-keygen -t rsa -b 4096 -C "your_work_email@company.com" -f ~/.ssh/<work_key> 
 ```
 
@@ -202,29 +201,38 @@ Then add a passphrase and press enter, it will ask for it twice. Press enter aga
 
 To update the passphrase for your SSH keys:
 
-```
+```sh
 ssh-keygen -p -f ~/.ssh/<personal_key>
 ```
 
 You can check your newly created key with:
 
-```
+```sh
 ls -la ~/.ssh
 ```
 
-which should output <personal_key> and <personal_key>.pub.
+which should output `<personal_key>` and `<personal_key>.pub`.
 
-Do the same steps for the <work_key>.
+Do the same steps for the `<work_key>`.
 
 3. Tell ssh-agent
 
 The website has an -K tag that works for macOSX and such but we don't need it.
 
-```
+```sh
 eval "$(ssh-agent -s)" && \
-ssh-add ~/.ssh/<personal_key> 
+ssh-add ~/.ssh/<personal_key> && \
 ssh-add ~/.ssh/<work_key> 
 ```
+
+or in fish use:
+
+```sh
+eval "$(ssh-agent -c)" && \
+ssh-add ~/.ssh/<personal_key> && \
+ssh-add ~/.ssh/<work_key> 
+```
+
 
 4. Edit your SSH config
 
@@ -250,15 +258,23 @@ CTRL+X
 
 5. Copy the SSH public key
 
-```
+```sh
 cat ~/.ssh/<personal_key>.pub | pbcopy
 ```
 
 Then paste on your respective website settings, such as the GitHub SSH settings page. Title it something you'll know it's your work computer.
 
-Same for your <work_key>
+Same for your `<work_key>`
 
-6. Structure your workspace for different profiles
+6. Check that the ssh key connects
+
+```sh
+# shell
+ssh -T git@<personal_host_name>
+ssh -T git@<some_host_name_work>
+```
+
+7. Structure your workspace for different profiles
 
 Now, for each key pair (aka profile or account), we will create a .conf file to make sure that your individual repositories have the user settings overridden accordingly.
 Let’s suppose your home directory is like that:
@@ -283,7 +299,7 @@ We are going to create two overriding .gitconfigs for each dir like this:
 
 Of course the folder and filenames can be whatever you prefer.
 
-7. Set up your Git configs
+8. Set up your Git configs
 
 In the personal git projects folder, make `.gitconfig.pers`
 
@@ -334,7 +350,7 @@ path = ~/work/.gitconfig.work
 
 Now finally to confirm if it worked, go to any work project you have and type the following:
 
-```
+```sh
 cd ~/work/work-project
 git config user.email
 ```
@@ -350,7 +366,24 @@ git config user.email
 
 And it should output your personal e-mail.
 
-8. **To clone new projects**, specially private or protected ones, use the username before the website:
+8. If you are on linux you might need to evaluate the keys every time, to avoid that:
+
+Add keychain eval to .bash_profile for every key you have:
+
+```sh
+echo 'eval "$(keychain --eval ssh id_rsa)"' >> ~/.bash_profile
+echo 'eval "$(keychain --eval ssh id_rsa_<personal_key>)"' >> ~/.bash_profile
+echo 'eval "$(keychain --eval ssh id_rsa_<work_key>)"' >> ~/.bash_profile
+```
+
+or fish config:
+```sh
+echo 'eval "$(keychain --eval ssh id_rsa)"' >> ~/.config/fish/config.fish
+echo 'eval "$(keychain --eval ssh id_rsa_<personal_key>)"' >> ~/.config/fish/config.fish
+echo 'eval "$(keychain --eval ssh id_rsa_<work_key>)"' >> ~/.config/fish/config.fish
+```
+
+9. **To clone new projects**, specially private or protected ones, use the username before the website:
 
 ```
 git clone https://<username>@github.com/<organization>/<repo>.git
@@ -363,7 +396,6 @@ https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/c
 And then copy and paste that as the password when the terminal asks you for user and password.s
 
 And done! When you push or pull from the personal account you might encounter some 2 factor authorizations at login, but otherwise it's ready to work on both personal and work projects.
-
 
 ### WSL and Windows shared ssh keys for multiple git accounts
 
@@ -378,30 +410,42 @@ https://devblogs.microsoft.com/commandline/sharing-ssh-keys-between-windows-and-
 
 1. Copy keys to WSL
 
-```
+```sh
 cp -r /mnt/c/Users/<username>/.ssh ~/.ssh
 ```
 
 2. Update permissions on the keys
 
-```
+```sh
 chmod 600 ~/.ssh/id_rsa
 ```
 Repeat for the other keys as well
 
 3. Install keychain
 
-```
+```sh
+# shell (debian)
 sudo apt install keychain
+
+# shell (arch)
+pacman -S keychain
 ```
 
 4. Add keychain eval to .bash_profile for every key you have:
 
+```sh
+echo 'eval "$(keychain --eval ssh id_rsa)"' >> ~/.bash_profile
+echo 'eval "$(keychain --eval ssh id_rsa_<personal_key>)"' >> ~/.bash_profile
+echo 'eval "$(keychain --eval ssh id_rsa_<work_key>)"' >> ~/.bash_profile
 ```
-echo 'eval "$(keychain --eval --agents ssh id_rsa)"' >> ~/.bash_profile
-echo 'eval "$(keychain --eval --agents ssh id_rsa_<personal_key>)"' >> ~/.bash_profile
-echo 'eval "$(keychain --eval --agents ssh id_rsa_<work_key>)"' >> ~/.bash_profile
+
+or fish config:
+```sh
+echo 'eval "$(keychain --eval ssh id_rsa)"' >> ~/.config/fish/config.fish
+echo 'eval "$(keychain --eval ssh id_rsa_<personal_key>)"' >> ~/.config/fish/config.fish
+echo 'eval "$(keychain --eval ssh id_rsa_<work_key>)"' >> ~/.config/fish/config.fish
 ```
+
 
 This will make it so that every time you start up the computer you have to type in the passwords for each of the keys, but they'll remain accessible after that.
 
@@ -438,7 +482,7 @@ This link explains that the newer versions of git are stricter with directory ow
 
 This can be bypassed by setting this: **(However, only use this if you do not consider yourself at risk)**
 
-```
+```sh
 git config --global safe.directory '*'
 ```
 
@@ -463,13 +507,13 @@ Now we need to install the git-lfs package to use it:
 
 Linux:
 
-```
+```sh
 sudo apt install git-lfs
 ```
 
 MacOSX:
 
-```
+```sh
 brew install git-lfs
 ```
 
@@ -479,14 +523,14 @@ This was fixed by checking my exported variables in `.zprofile`.
 
 The problem was it was set up like this:
 
-```
+```sh
 export https_proxy=http://{PROXY_HOST}:{PORT}
 export HTTPS_PROXY=https://{PROXY_HOST}:{PORT}
 ```
 
 Where the proxy host at my lab doesn't manage the `https:// ` addresses correctly. So I had to correct them and remove the `s` like this:
 
-```
+```sh
 export https_proxy=http://{PROXY_HOST}:{PORT}
 export HTTPS_PROXY=http://{PROXY_HOST}:{PORT}
 ```
@@ -499,70 +543,70 @@ Now that we have Git and Python installed, we can make our first project. I like
 
 First make a repository on GitHub with no .gitignore, no README and no license.
 Then, on local terminal, cd to the directory of your project and initialize git
-```
+```sh
 cd path/to/your/project
 git init
 ```
 
 If using Git LFS:
-```
+```sh
 git lfs install
 ```
 It's supposed to be ready, but first, let's make a few hooks executable
-```
+```sh
 chmod +x .git/hooks/*
 ```
 
 Make a .gitignore depending on which files you don't want in the repository and add it
-```
+```sh
 git add .gitignore
 ```
 
 If using Git LFS, add the tracking settings for this project (For example, heavy csv files in this case)
-```
+```sh
 git lfs track "*.csv"
 ```
 
 And then add them to git
-```
+```sh
 git add .gitattributes
 ```
 
 Commit these changes first
-```
+```sh
 git commit -m "First commit, add .gitignore and .gitattributes"
 ```
 
 Now add all the data from your local repository. `git add .` adds all the files in the folder.
-```
+```sh
 git add .
 ```
 
 Depending on the size of your project, it might be wiser to add it in parts instead of all at once. e.g.
-```
+```sh
 git add *.py
 git add *.csv
 ...
 ```
 or
-```
+```sh
 git add dir1
 git add dir2
 ...
 ```
 
 Check if all the paths are added
-```
+```sh
 git status
 ```
 
 Check if all the Git LFS files are tracked correctly
-```
+```sh
 git lfs ls-files
 ```
 
 If so, commit.
-```
+```sh
 git commit -m "First data commit"
 ```
 
@@ -572,17 +616,17 @@ git remote add origin remote_repository_URL_here
 ```
 
 Verify the new remote URL
-```
+```sh
 git remote -v
 ```
 
 Set upstream and then push only the lfs files to remote
-```
+```sh
 git lfs push origin master
 ```
 
 Afterwards push normally to upload everything
-```
+```sh
 git push --set-upstream origin main
 ```
 

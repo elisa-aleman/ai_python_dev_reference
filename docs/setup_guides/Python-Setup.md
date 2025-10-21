@@ -32,7 +32,7 @@ source ~/.bash_profile
 And then we can add it to our PATH so that every time we open `python` it's the pyenv one and not the system one:
 
 ```sh
-# @ shell(linux/mac_osx/wsl)
+# @ shell(linux/mac_osx/wsl) bash
 
 echo '' >> ~/.bash_profile
 echo '# Install pyenv to ~/.pyenv' >> ~/.bash_profile
@@ -42,6 +42,20 @@ echo 'eval "$(pyenv init -)"' >> ~/.bash_profile
 
 source ~/.bash_profile
 ```
+In case you use fish:
+
+```sh
+# @ shell(linux/mac_osx/wsl) fish
+set -Ux PYENV_ROOT $HOME/.pyenv
+test -d $PYENV_ROOT/bin; and fish_add_path $PYENV_ROOT/bin
+
+echo '' >> ~/.config/fish/config.fish
+echo '# Install pyenv to ~/.pyenv' >> ~/.config/fish/config.fish
+echo 'pyenv init - fish | source' >> ~/.config/fish/config.fish
+
+source ~/.config/fish/config.fish
+```
+
 
 For Dockerfiles:
 ```Dockerfile
@@ -241,7 +255,7 @@ To update pyenv-win, if installed via Git go to `%USERPROFILE%\.pyenv\pyenv-win`
 
 Now let's install and set the version we will use (`pyenv install -l` to check available versions).
 
-Currently I recommend python 3.11.10 because of some important packages (in my case, tensorflow) that still aren't compatible with python 3.12, not to mention there is an available Docker image for python 3.11.10 available called [`3.11.10-bookworm`](https://github.com/docker-library/python/blob/811625e080937a4eca2055b8a31e382563e5b1a3/3.11/bookworm/Dockerfile)
+Currently I recommend python 3.12.12, becasue of tensorflow compatibility limitations with higher versions, not to mention there is an available Docker image for 3.12.12 called [3.12-bookworm](https://hub.docker.com/layers/library/python/3.12-bookworm/images/sha256-ef9fc8e04026f71cfb24772366551731703b74282f3519b95baae8618fe47873).
 
 However, with GPU processing projects which use CUDA drivers, I recommend actually using the [Nvidia cuda docker containers](https://hub.docker.com/r/nvidia/cuda) and installing python with pyenv as well.
 
@@ -255,8 +269,8 @@ Make sure to follow those instructions before continuing, or the installations w
 ```sh
 # @ shell(linux/mac_osx/wsl)
 
-pyenv install 3.11.10
-pyenv global 3.11.10
+pyenv install 3.12.12
+pyenv global 3.12.12
 pyenv rehash
 ```
 
@@ -299,12 +313,21 @@ RUN pyenv rehash
 
 Although the official installation guide allows for many ways of installing, I've had trouble running some of these inside Docker images, so I think the best option is actually to install via pip.
 
-Install for Linux/WSL
+Install for Linux/WSL (debian)
 ```sh
-# @ shell(linux/wsl)
+# @ shell(linux/wsl) (debian)
 
 sudo apt-get update
 sudo apt-get install pipx
+```
+
+Install for Linux/WSL (arch)
+
+```sh
+# shell(arch-based)
+
+pacman -Syy
+pacman -S python-pipx
 ```
 
 Install for MacOSX
@@ -330,6 +353,14 @@ USER root
 
 RUN pip install pipx
 ENV PATH="${PATH}:/root/.local/bin"
+```
+
+If you are using fish instead of bash do:
+
+```sh
+# shell (fish)
+
+fish_add_path '.local/bin'
 ```
 
 ## Poetry for python project and dependency management

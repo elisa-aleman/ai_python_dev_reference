@@ -88,22 +88,31 @@ $ which ruby
 First lets install Ruby, on which Jekyll and Bundler will be later installed.
 
 ```sh
-# @ shell(linux/wsl)
+# @ shell(linux/wsl) (debian)
 
 sudo apt-get install ruby-full build-essential zlib1g-dev
+
+# @ shell(linux/wsl) (arch)
+
+pacman -S rubygems
 ```
 
 Then, we have to add to the $PATH so that ruby gems are found:
 
 ```sh
-# @ shell(linux/wsl)
+# @ shell(linux/wsl) (bash)
 
 echo '' >> ~/.bash_profile
 echo '# Install Ruby Gems to ~/gems' >> ~/.bash_profile
 echo 'export GEM_HOME="$HOME/gems"' >> ~/.bash_profile
 echo 'export PATH="$HOME/gems/bin:$PATH"' >> ~/.bash_profile
 source ~/.bash_profile
+
+# Or fish:
+
+fish_add_path .local/share/gem/ruby/3.4.0/bin
 ```
+
 
 ## Install Jekyll and Bundler
 

@@ -32,7 +32,7 @@ References:
 Setup root password:
 
 ```sh
-# @ shell(mac_osx)
+# @ shell(linux)
 
 sudo passwd root
 ```
@@ -48,12 +48,12 @@ To set it as the default [follow this guide](https://help.ubuntu.com/stable/ubun
 
 
 
-### Install basic apt and apt-get software
+### Install basic build software
 
 In order for most anything else to install properly, we need these first:
 
 ```sh
-# @ shell(linux)
+# @ shell(debian-based)
 
 sudo apt-get update
 sudo apt-get install \
@@ -74,6 +74,21 @@ sudo apt-get install \
     wget \
     xz-utils \
     zlib1g-dev
+```
+
+Now I just started using an Arch-based distro so don't quote me on this but these should be the equivalents:
+
+```sh
+# shell(arch-based)
+
+pacman -Syy
+pacman -S \
+    base-devel \
+    curl \
+    libffi \
+    llvm \
+    make \
+    wget
 ```
 
 Without these, there can sometimes be errors. I include this list here because a lot of the time I would install this and forget, and then struggle with errors when starting from a new machine, or a Docker image.

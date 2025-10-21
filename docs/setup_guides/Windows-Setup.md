@@ -250,6 +250,11 @@ For accelerated GPU processing (specifically nvidia GPUs) for your AI programs I
 
 For specific examples where I used CUDA compatible images, see my [CUDA python dockerfiles document](../ai_development/CUDA-python-dockerfiles.md)
 
+## Avoid updates while running programs
+
+References:
+- [Windows Updates Restart Disable](https://www.thewindowsclub.com/windows-updates-restart-disable)
+
 ---
 
 That is all for now. This is my initial setup for the development environment. If I have any projects that need further tinkering, that goes on another repository / tutorial.
