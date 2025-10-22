@@ -94,7 +94,7 @@ sudo apt-get install ruby-full build-essential zlib1g-dev
 
 # @ shell(linux/wsl) (arch)
 
-pacman -S rubygems
+sudo pacman -S rubygems
 ```
 
 Then, we have to add to the $PATH so that ruby gems are found:

@@ -428,7 +428,7 @@ Repeat for the other keys as well
 sudo apt install keychain
 
 # shell (arch)
-pacman -S keychain
+sudo pacman -S keychain
 ```
 
 4. Add keychain eval to .bash_profile for every key you have:

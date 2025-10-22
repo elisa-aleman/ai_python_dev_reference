@@ -680,7 +680,7 @@ sudo apt-get install texlive-latex-extra
 sudo apt-get install latexdiff
 
 # @ shell(linux/wsl) (arch)
-pacman -S \
+sudo pacman -S \
     texlive-latexextra \
     texlive-binextra \
     texlive-fontsrecommended \

@@ -326,8 +326,8 @@ Install for Linux/WSL (arch)
 ```sh
 # shell(arch-based)
 
-pacman -Syy
-pacman -S python-pipx
+sudo pacman -Syy
+sudo pacman -S python-pipx
 ```
 
 Install for MacOSX

@@ -81,8 +81,8 @@ Now I just started using an Arch-based distro so don't quote me on this but thes
 ```sh
 # shell(arch-based)
 
-pacman -Syy
-pacman -S \
+sudo pacman -Syy
+sudo pacman -S \
     base-devel \
     curl \
     libffi \
@@ -92,6 +92,41 @@ pacman -S \
 ```
 
 Without these, there can sometimes be errors. I include this list here because a lot of the time I would install this and forget, and then struggle with errors when starting from a new machine, or a Docker image.
+
+### Install Japanese and Chinese keyboards
+
+```sh
+# fish (arch)
+sudo pacman -S \
+    fcitx5 \
+    fcitx5-qt \
+    fcitx5-rime \
+    fcitx5-gtk \
+    fcitx5-configtool \
+    fcitx5-chinese-addons \
+    fcitx5-mozc \
+    fcitx5-table-other \
+    fcitx5-table-extra \
+    noto-fonts \
+    noto-fonts-extra \
+    noto-fonts-cjk \
+    asian-fonts
+    
+set -gx GTK_IM_MODULE fcitx
+set -gx QT_IM_MODULE fcitx
+set -gx XMODIFIERS @im=fcitx
+
+```
+
+Then re-login
+
+Add Input methods:
+
+- Keyboard - English (US) - English (US, intl. AltGr Unicode combining)
+- Mozc
+    - This is Japanese input
+- Pinyin
+    - This is Chinese input
 
 ### Setup git
 
